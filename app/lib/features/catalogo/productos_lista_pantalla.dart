@@ -31,6 +31,13 @@ class _ProductosListaPantallaState
 
     return PantallaBase(
       titulo: 'Catálogo de productos',
+      acciones: [
+        IconButton(
+          tooltip: 'Recetas',
+          icon: const Icon(Icons.menu_book_outlined),
+          onPressed: () => context.push(Rutas.recetas),
+        ),
+      ],
       botonFlotante: RequierePermiso(
         modulo: Modulo.catalogo,
         nivel: NivelPermiso.cargar,

@@ -76,7 +76,7 @@ class _ProductoFormularioPantallaState
     }
   }
 
-  Widget _construirFormulario() {
+  Widget _construirFormulario({CostoProductoEstimado? costo}) {
     return FormularioResponsivo(
       formKey: _formKey,
       campos: [
@@ -105,6 +105,33 @@ class _ProductoFormularioPantallaState
           obligatorio: false,
           onChanged: (v) => _precioBase = v,
         ),
+        if (costo != null)
+          TarjetaSeccion(
+            titulo: 'Costeo según receta',
+            children: [
+              FilaDato(etiqueta: 'Receta vinculada', valor: costo.recetaNombre),
+              FilaDato(
+                etiqueta: 'Costo estimado por unidad',
+                valor: costo.costoUnitario.formatear(),
+              ),
+              FilaDato(
+                etiqueta: 'Precio sugerido (×3)',
+                valor: costo.precioSugerido().formatear(),
+              ),
+              if (costo.margenPorcentaje != null)
+                FilaDato(
+                  etiqueta: 'Margen actual',
+                  valor:
+                      '${costo.margenPorcentaje}% (${costo.margenUnitario!.formatear()})',
+                ),
+              if (!costo.tieneCostoCompleto)
+                const FilaDato(
+                  etiqueta: 'Aviso',
+                  valor: 'Algún ingrediente de la receta todavía no tiene compras registradas',
+                  icono: Icons.info_outline,
+                ),
+            ],
+          ),
         CampoTexto(
           etiqueta: 'Descripción / notas',
           valorInicial: _descripcion,
@@ -130,6 +157,7 @@ class _ProductoFormularioPantallaState
     }
 
     final asyncProducto = ref.watch(productoProvider(widget.id!));
+    final asyncCosto = ref.watch(costoProductoProvider(widget.id!));
     return PantallaBase(
       titulo: 'Editar producto',
       acciones: [
@@ -147,7 +175,7 @@ class _ProductoFormularioPantallaState
         valor: asyncProducto,
         builder: (context, producto) {
           _precargar(producto!);
-          return _construirFormulario();
+          return _construirFormulario(costo: asyncCosto.asData?.value);
         },
       ),
     );

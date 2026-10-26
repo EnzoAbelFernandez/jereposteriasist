@@ -5,8 +5,13 @@ import 'package:jereposteria/compartido/compartido.dart';
 import 'package:jereposteria/data/data.dart';
 
 class ProduccionFormularioPantalla extends ConsumerStatefulWidget {
-  const ProduccionFormularioPantalla({super.key, this.pedidoIdInicial});
+  const ProduccionFormularioPantalla({
+    super.key,
+    this.pedidoIdInicial,
+    this.recetaIdInicial,
+  });
   final String? pedidoIdInicial;
+  final String? recetaIdInicial;
 
   @override
   ConsumerState<ProduccionFormularioPantalla> createState() =>
@@ -14,6 +19,8 @@ class ProduccionFormularioPantalla extends ConsumerStatefulWidget {
 }
 
 class _RenglonConsumo {
+  _RenglonConsumo({this.insumo, this.cantidad});
+
   Insumo? insumo;
   int? cantidad;
 }
@@ -24,18 +31,21 @@ class _ProduccionFormularioPantallaState
 
   late DateTime _fecha;
   String? _productoId;
+  String? _recetaId;
   String _descripcion = '';
   int _descripcionVersion = 0;
   int _cantidad = 1;
   String? _pedidoId;
   String _notas = '';
   final List<_RenglonConsumo> _consumos = [];
+  bool _cargandoReceta = false;
 
   @override
   void initState() {
     super.initState();
     _fecha = DateTime.now();
     _pedidoId = widget.pedidoIdInicial;
+    _recetaId = widget.recetaIdInicial;
   }
 
   @override
@@ -44,6 +54,65 @@ class _ProduccionFormularioPantallaState
     if (oldWidget.pedidoIdInicial != widget.pedidoIdInicial &&
         _pedidoId == null) {
       _pedidoId = widget.pedidoIdInicial;
+    }
+    if (oldWidget.recetaIdInicial != widget.recetaIdInicial &&
+        _recetaId == null) {
+      _recetaId = widget.recetaIdInicial;
+    }
+  }
+
+  Future<void> _cargarInsumosDeReceta() async {
+    if (_recetaId == null) return;
+    setState(() => _cargandoReceta = true);
+    try {
+      final detalle = await ref
+          .read(recetasRepositorioProvider)
+          .observarDetalle(_recetaId!)
+          .first;
+      if (detalle == null || !mounted) return;
+
+      final consumosEscalados = detalle.escalarConsumos(lotes: _cantidad);
+
+      List<Insumo> activos = const [];
+      try {
+        activos = await ref
+            .read(insumosRepositorioProvider)
+            .observarActivos()
+            .first
+            .timeout(const Duration(milliseconds: 500));
+      } catch (_) {}
+      final insumosPorId = {for (final ins in activos) ins.id: ins};
+
+      final nuevos = <_RenglonConsumo>[];
+      for (var i = 0; i < consumosEscalados.length; i++) {
+        final c = consumosEscalados[i];
+        final itemDetalle = i < detalle.items.length ? detalle.items[i] : null;
+
+        final insumo =
+            insumosPorId[c.insumoId] ??
+            (itemDetalle != null
+                ? Insumo(
+                    id: c.insumoId,
+                    nombre: itemDetalle.insumoNombre,
+                    unidad: itemDetalle.unidad,
+                  )
+                : null);
+
+        nuevos.add(_RenglonConsumo(insumo: insumo, cantidad: c.cantidad));
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _consumos
+          ..clear()
+          ..addAll(nuevos);
+      });
+
+      mostrarExito(context, 'Insumos cargados desde la receta');
+    } finally {
+      if (mounted) {
+        setState(() => _cargandoReceta = false);
+      }
     }
   }
 
@@ -68,6 +137,7 @@ class _ProduccionFormularioPantallaState
       descripcion: _descripcion.trim(),
       cantidad: _cantidad,
       pedidoId: _pedidoId,
+      recetaId: _recetaId,
       notas: _notas.trim().isEmpty ? null : _notas.trim(),
       consumos: consumosDatos,
     );
@@ -166,6 +236,33 @@ class _ProduccionFormularioPantallaState
               });
             },
           ),
+          SelectorReceta(
+            recetaId: _recetaId,
+            onChanged: (resumen) {
+              setState(() {
+                _recetaId = resumen?.receta.id;
+                if (resumen != null) {
+                  if (_descripcion.trim().isEmpty) {
+                    _descripcion = resumen.receta.nombre;
+                    _descripcionVersion++;
+                  }
+                  if (_productoId == null &&
+                      resumen.receta.productoId != null) {
+                    _productoId = resumen.receta.productoId;
+                  }
+                }
+              });
+            },
+          ),
+          if (_recetaId != null)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.tonalIcon(
+                onPressed: _cargandoReceta ? null : _cargarInsumosDeReceta,
+                icon: const Icon(Icons.download_outlined),
+                label: const Text('Cargar insumos de la receta'),
+              ),
+            ),
           CampoTexto(
             key: ValueKey('desc_$_descripcionVersion'),
             etiqueta: 'Qué se produjo',

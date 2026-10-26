@@ -25,6 +25,11 @@ class _ComprasListaPantallaState extends ConsumerState<ComprasListaPantalla> {
       titulo: 'Compras',
       acciones: [
         IconButton(
+          tooltip: 'Sugeridas',
+          icon: const Icon(Icons.playlist_add_check_outlined),
+          onPressed: () => context.push(Rutas.comprasSugeridas),
+        ),
+        IconButton(
           tooltip: 'Proveedores',
           icon: const Icon(Icons.local_shipping_outlined),
           onPressed: () => context.push(Rutas.proveedores),
