@@ -1,15 +1,12 @@
 # =============================================================================
-# PowerSync â€“ Sync Streams: quÃ© datos baja cada usuario a su dispositivo
+# PowerSync – Sync Streams: qué datos baja cada usuario a su dispositivo
 # =============================================================================
-# DEBE reflejar las polÃ­ticas RLS de supabase/migrations/*_rls.sql (lectura).
-# Si cambiÃ¡s una, cambiÃ¡ la otra. Las escrituras las valida Supabase (RLS + triggers).
+# DEBE reflejar las políticas RLS de supabase/migrations/*_rls.sql (lectura).
+# Si cambiás una, cambiá la otra. Las escrituras las valida Supabase (RLS + triggers).
 #
-# PatrÃ³n de permiso:
-#   auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo IN (...) AND nivel IN ('ver','cargar','editar'))
-# El jefe tiene 'editar' en todos los mÃ³dulos (lo garantiza un trigger), asÃ­ que no necesita casos especiales,
-# salvo en tareas y permisos, que no son mÃ³dulos.
-#
-# Validar en el panel de PowerSync al desplegar (Sync Streams, edition 3).
+# Nota sobre el parser de PowerSync:
+#   No admite `IN ('a', 'b')` ni `<>` dentro de subqueries `IN (SELECT ...)`,
+#   por lo que se usa `(modulo = 'a' OR modulo = 'b') AND (nivel = 'ver' OR nivel = 'cargar' OR nivel = 'editar')`.
 # =============================================================================
 
 config:
@@ -37,62 +34,61 @@ streams:
   clientes:
     auto_subscribe: true
     queries:
-      - SELECT * FROM clientes WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo IN ('clientes', 'pedidos') AND nivel IN ('ver', 'cargar', 'editar'))
+      - SELECT * FROM clientes WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE (modulo = 'clientes' OR modulo = 'pedidos') AND (nivel = 'ver' OR nivel = 'cargar' OR nivel = 'editar'))
 
-  # ---------- CatÃ¡logo de productos (catalogo | pedidos | produccion) ----------
+  # ---------- Catálogo de productos (catalogo | pedidos | produccion) ----------
   productos:
     auto_subscribe: true
     queries:
-      - SELECT * FROM productos WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo IN ('catalogo', 'pedidos', 'produccion') AND nivel IN ('ver', 'cargar', 'editar'))
+      - SELECT * FROM productos WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE (modulo = 'catalogo' OR modulo = 'pedidos' OR modulo = 'produccion') AND (nivel = 'ver' OR nivel = 'cargar' OR nivel = 'editar'))
 
   # ---------- Recetas (produccion | catalogo) ----------
   recetas:
     auto_subscribe: true
     queries:
-      - SELECT * FROM recetas WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo IN ('produccion', 'catalogo') AND nivel IN ('ver', 'cargar', 'editar'))
-      - SELECT * FROM receta_items WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo IN ('produccion', 'catalogo') AND nivel IN ('ver', 'cargar', 'editar'))
+      - SELECT * FROM recetas WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE (modulo = 'produccion' OR modulo = 'catalogo') AND (nivel = 'ver' OR nivel = 'cargar' OR nivel = 'editar'))
+      - SELECT * FROM receta_items WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE (modulo = 'produccion' OR modulo = 'catalogo') AND (nivel = 'ver' OR nivel = 'cargar' OR nivel = 'editar'))
 
   # ---------- Pedidos (pedidos | produccion) ----------
   pedidos:
     auto_subscribe: true
     queries:
-      - SELECT * FROM pedidos WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo IN ('pedidos', 'produccion') AND nivel IN ('ver', 'cargar', 'editar'))
-      - SELECT * FROM pedido_items WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo IN ('pedidos', 'produccion') AND nivel IN ('ver', 'cargar', 'editar'))
+      - SELECT * FROM pedidos WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE (modulo = 'pedidos' OR modulo = 'produccion') AND (nivel = 'ver' OR nivel = 'cargar' OR nivel = 'editar'))
+      - SELECT * FROM pedido_items WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE (modulo = 'pedidos' OR modulo = 'produccion') AND (nivel = 'ver' OR nivel = 'cargar' OR nivel = 'editar'))
 
   # ---------- Insumos y stock (stock | compras | produccion) ----------
   stock:
     auto_subscribe: true
     queries:
-      - SELECT * FROM insumos WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo IN ('stock', 'compras', 'produccion') AND nivel IN ('ver', 'cargar', 'editar'))
-      - SELECT * FROM movimientos_stock WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo IN ('stock', 'compras', 'produccion') AND nivel IN ('ver', 'cargar', 'editar'))
+      - SELECT * FROM insumos WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE (modulo = 'stock' OR modulo = 'compras' OR modulo = 'produccion') AND (nivel = 'ver' OR nivel = 'cargar' OR nivel = 'editar'))
+      - SELECT * FROM movimientos_stock WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE (modulo = 'stock' OR modulo = 'compras' OR modulo = 'produccion') AND (nivel = 'ver' OR nivel = 'cargar' OR nivel = 'editar'))
 
   # ---------- Compras (compras) ----------
   compras:
     auto_subscribe: true
     queries:
-      - SELECT * FROM proveedores WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo = 'compras' AND nivel IN ('ver', 'cargar', 'editar'))
-      - SELECT * FROM compras WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo = 'compras' AND nivel IN ('ver', 'cargar', 'editar'))
-      - SELECT * FROM compra_items WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo = 'compras' AND nivel IN ('ver', 'cargar', 'editar'))
+      - SELECT * FROM proveedores WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo = 'compras' AND (nivel = 'ver' OR nivel = 'cargar' OR nivel = 'editar'))
+      - SELECT * FROM compras WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo = 'compras' AND (nivel = 'ver' OR nivel = 'cargar' OR nivel = 'editar'))
+      - SELECT * FROM compra_items WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo = 'compras' AND (nivel = 'ver' OR nivel = 'cargar' OR nivel = 'editar'))
 
-  # ---------- ProducciÃ³n (produccion) ----------
+  # ---------- Producción (produccion) ----------
   produccion:
     auto_subscribe: true
     queries:
-      - SELECT * FROM producciones WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo = 'produccion' AND nivel IN ('ver', 'cargar', 'editar'))
+      - SELECT * FROM producciones WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo = 'produccion' AND (nivel = 'ver' OR nivel = 'cargar' OR nivel = 'editar'))
 
   # ---------- Gastos (gastos | caja) ----------
   gastos:
     auto_subscribe: true
     queries:
-      - SELECT * FROM categorias_gasto WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo IN ('gastos', 'caja') AND nivel IN ('ver', 'cargar', 'editar'))
-      - SELECT * FROM gastos WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo IN ('gastos', 'caja') AND nivel IN ('ver', 'cargar', 'editar'))
+      - SELECT * FROM categorias_gasto WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE (modulo = 'gastos' OR modulo = 'caja') AND (nivel = 'ver' OR nivel = 'cargar' OR nivel = 'editar'))
+      - SELECT * FROM gastos WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE (modulo = 'gastos' OR modulo = 'caja') AND (nivel = 'ver' OR nivel = 'cargar' OR nivel = 'editar'))
 
   # ---------- Caja ----------
-  # caja:ver => toda la caja. Sin caja, cada mÃ³dulo ve solo sus movimientos.
   caja:
     auto_subscribe: true
     queries:
-      - SELECT * FROM movimientos_caja WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo = 'caja' AND nivel IN ('ver', 'cargar', 'editar'))
-      - SELECT * FROM movimientos_caja WHERE pedido_id IS NOT NULL AND auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo = 'pedidos' AND nivel IN ('ver', 'cargar', 'editar'))
-      - SELECT * FROM movimientos_caja WHERE compra_id IS NOT NULL AND auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo = 'compras' AND nivel IN ('ver', 'cargar', 'editar'))
-      - SELECT * FROM movimientos_caja WHERE gasto_id IS NOT NULL AND auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo = 'gastos' AND nivel IN ('ver', 'cargar', 'editar'))
+      - SELECT * FROM movimientos_caja WHERE auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo = 'caja' AND (nivel = 'ver' OR nivel = 'cargar' OR nivel = 'editar'))
+      - SELECT * FROM movimientos_caja WHERE pedido_id IS NOT NULL AND auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo = 'pedidos' AND (nivel = 'ver' OR nivel = 'cargar' OR nivel = 'editar'))
+      - SELECT * FROM movimientos_caja WHERE compra_id IS NOT NULL AND auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo = 'compras' AND (nivel = 'ver' OR nivel = 'cargar' OR nivel = 'editar'))
+      - SELECT * FROM movimientos_caja WHERE gasto_id IS NOT NULL AND auth.user_id() IN (SELECT perfil_id FROM permisos WHERE modulo = 'gastos' AND (nivel = 'ver' OR nivel = 'cargar' OR nivel = 'editar'))

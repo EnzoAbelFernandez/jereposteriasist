@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jereposteria/compartido/tipos/enums.dart';
 import 'package:jereposteria/compartido/tipos/errores.dart';
@@ -28,11 +30,13 @@ abstract class EquipoRepositorio {
   });
   Future<void> desactivar(String perfilId);
   Future<void> reactivar(String perfilId);
+  Future<void> cambiarRol(String perfilId, Rol rol);
 }
 
 abstract class ConfiguracionRepositorio {
   Stream<Configuracion> observar();
   Future<void> actualizar(Configuracion c);
+  Future<String> exportarBackupJson();
 }
 
 class _AlertasRepositorioLocal implements AlertasRepositorio {
@@ -236,6 +240,29 @@ class _EquipoRepositorioLocal implements EquipoRepositorio {
     );
     _almacen.notificar();
   }
+
+  @override
+  Future<void> cambiarRol(String perfilId, Rol rol) async {
+    final p = _almacen.perfiles[perfilId];
+    if (p == null) {
+      throw const ErrorDeNegocio('El usuario no existe.');
+    }
+    if (perfilId == _almacen.usuarioActualId) {
+      throw const ErrorDeNegocio('No podés cambiar tu propio rol.');
+    }
+    _almacen.perfiles[perfilId] = Perfil(
+      id: p.id,
+      nombre: p.nombre,
+      rol: rol,
+      telefono: p.telefono,
+      activo: p.activo,
+    );
+    _almacen.permisos[perfilId] = {
+      for (final m in Modulo.values)
+        m: rol == Rol.jefe ? NivelPermiso.editar : NivelPermiso.ninguno,
+    };
+    _almacen.notificar();
+  }
 }
 
 class _ConfiguracionRepositorioLocal implements ConfiguracionRepositorio {
@@ -262,6 +289,107 @@ class _ConfiguracionRepositorioLocal implements ConfiguracionRepositorio {
     _almacen.configuracion = c.copyWith(nombreNegocio: c.nombreNegocio.trim());
     _almacen.recalcularTodosLosHabituales();
     _almacen.notificar();
+  }
+
+  @override
+  Future<String> exportarBackupJson() async {
+    final mapa = {
+      'exportado_en': DateTime.now().toIso8601String(),
+      'configuracion': {
+        'nombre_negocio': _almacen.configuracion.nombreNegocio,
+        'dias_aviso_cumple': _almacen.configuracion.diasAvisoCumple,
+        'aviso_cumple_alcance': _almacen.configuracion.avisoCumpleAlcance.name,
+        'habitual_min_pedidos': _almacen.configuracion.habitualMinPedidos,
+        'habitual_meses': _almacen.configuracion.habitualMeses,
+      },
+      'totales': {
+        'clientes': _almacen.clientes.length,
+        'proveedores': _almacen.proveedores.length,
+        'insumos': _almacen.insumos.length,
+        'productos': _almacen.productos.length,
+        'recetas': _almacen.recetas.length,
+        'pedidos': _almacen.pedidos.length,
+        'compras': _almacen.compras.length,
+        'gastos': _almacen.gastos.length,
+        'producciones': _almacen.producciones.length,
+        'movimientos_stock': _almacen.movimientosStock.length,
+        'movimientos_caja': _almacen.movimientosCaja.length,
+        'tareas': _almacen.tareas.length,
+      },
+      'clientes': [
+        for (final c in _almacen.clientes.values)
+          {
+            'id': c.id,
+            'nombre': c.nombre,
+            'telefono': c.telefono,
+            'email': c.email,
+            'direccion': c.direccion,
+            'cumple_dia': c.cumpleDia,
+            'cumple_mes': c.cumpleMes,
+            'cumple_anio': c.cumpleAnio,
+            'habitual_modo': c.habitualModo.name,
+            'es_habitual': c.esHabitual,
+            'archivado': c.archivado,
+          },
+      ],
+      'proveedores': [
+        for (final p in _almacen.proveedores.values)
+          {
+            'id': p.id,
+            'nombre': p.nombre,
+            'telefono': p.telefono,
+            'email': p.email,
+            'archivado': p.archivado,
+          },
+      ],
+      'insumos': [
+        for (final i in _almacen.insumos.values)
+          {
+            'id': i.id,
+            'nombre': i.nombre,
+            'unidad': i.unidad.valor,
+            'stock_minimo': i.stockMinimo,
+            'stock_actual': _almacen.stockDe(i.id),
+            'categoria': i.categoria,
+            'archivado': i.archivado,
+          },
+      ],
+      'productos': [
+        for (final p in _almacen.productos.values)
+          {
+            'id': p.id,
+            'nombre': p.nombre,
+            'categoria': p.categoria.name,
+            'precio_base_centavos': p.precioBase?.centavos,
+            'archivado': p.archivado,
+          },
+      ],
+      'pedidos': [
+        for (final p in _almacen.pedidos.values)
+          {
+            'id': p.id,
+            'numero': p.numero,
+            'cliente_id': p.clienteId,
+            'fecha_entrega': p.fechaEntrega.toIso8601String(),
+            'tipo_entrega': p.tipoEntrega.name,
+            'estado': p.estado.name,
+            'descuento_centavos': p.descuento.centavos,
+          },
+      ],
+      'movimientos_caja': [
+        for (final m in _almacen.movimientosCaja.values)
+          {
+            'id': m.id,
+            'fecha': m.fecha.toIso8601String(),
+            'tipo': m.tipo.name,
+            'monto_centavos': m.monto.centavos,
+            'medio_pago': m.medioPago.name,
+            'concepto': m.concepto.name,
+            'descripcion': m.descripcionTexto,
+          },
+      ],
+    };
+    return const JsonEncoder.withIndent('  ').convert(mapa);
   }
 }
 

@@ -27,6 +27,7 @@ abstract class ReportesRepositorio {
     PeriodoMensual periodo,
   );
   Stream<RankingsPeriodo> observarRankings(PeriodoMensual periodo);
+  Future<String> exportarResumenCsv(PeriodoMensual periodo);
 }
 
 Dinero? _estimarCostoInsumo(
@@ -525,6 +526,62 @@ class _ReportesRepositorioLocal implements ReportesRepositorio {
         mejoresClientes: topClientes.take(10).toList(),
       );
     });
+  }
+
+  String _escaparCsv(String valor) => '"${valor.replaceAll('"', '""')}"';
+
+  @override
+  Future<String> exportarResumenCsv(PeriodoMensual periodo) async {
+    final r = await observarResumenFinanciero(periodo).first;
+    final rk = await observarRankings(periodo).first;
+    final sb = StringBuffer();
+    sb.writeln('Período;${_escaparCsv(periodo.etiqueta)}');
+    sb.writeln();
+    sb.writeln('Concepto;Valor');
+    sb.writeln(
+      'Ingresos por pedidos y señas;${_escaparCsv(r.ingresosPedidos.formatear())}',
+    );
+    sb.writeln('Otros ingresos;${_escaparCsv(r.otrosIngresos.formatear())}');
+    sb.writeln('Total ingresos;${_escaparCsv(r.totalIngresos.formatear())}');
+    sb.writeln(
+      'Compras de insumos;${_escaparCsv(r.egresosCompras.formatear())}',
+    );
+    sb.writeln('Gastos operativos;${_escaparCsv(r.egresosGastos.formatear())}');
+    sb.writeln('Otros egresos;${_escaparCsv(r.otrosEgresos.formatear())}');
+    sb.writeln('Total egresos;${_escaparCsv(r.totalEgresos.formatear())}');
+    sb.writeln(
+      'Resultado neto;${_escaparCsv(r.resultadoNeto.formatear(conSigno: true))}',
+    );
+    sb.writeln('Pedidos entregados;${r.pedidosEntregados}');
+    sb.writeln('Pedidos cancelados;${r.pedidosCancelados}');
+    if (r.gastosPorCategoria.isNotEmpty) {
+      sb.writeln();
+      sb.writeln('Categoría de gasto;Porcentaje;Monto');
+      for (final c in r.gastosPorCategoria) {
+        sb.writeln(
+          '${_escaparCsv(c.categoriaNombre)};${c.porcentajeEntero}%;${_escaparCsv(c.monto.formatear())}',
+        );
+      }
+    }
+    if (rk.productosMasVendidos.isNotEmpty) {
+      sb.writeln();
+      sb.writeln('Producto más vendido;Unidades;Ingresos');
+      for (final p in rk.productosMasVendidos) {
+        sb.writeln(
+          '${_escaparCsv(p.nombre)};${p.unidadesVendidas};${_escaparCsv(p.ingresosTotales.formatear())}',
+        );
+      }
+    }
+    if (rk.mejoresClientes.isNotEmpty) {
+      sb.writeln();
+      sb.writeln('Mejor cliente;Pedidos;Total comprado');
+      for (final c in rk.mejoresClientes) {
+        sb.writeln(
+          '${_escaparCsv(c.nombre)};${c.cantidadPedidos};${_escaparCsv(c.montoTotal.formatear())}',
+        );
+      }
+    }
+    return sb.toString();
   }
 }
 

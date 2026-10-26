@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:jereposteria/compartido/formato/fechas.dart';
 import 'package:jereposteria/compartido/tipos/dinero.dart';
 import 'package:jereposteria/compartido/tipos/enums.dart';
 import 'package:jereposteria/compartido/tipos/errores.dart';
@@ -16,6 +17,7 @@ abstract class CajaRepositorio {
     DateTime? fecha,
   });
   Future<void> anularMovimiento(String id);
+  Future<String> exportarCsv(FiltroCaja filtro);
 }
 
 class _CajaRepositorioLocal implements CajaRepositorio {
@@ -161,6 +163,32 @@ class _CajaRepositorioLocal implements CajaRepositorio {
       creadoPorNombre: _almacen.nombreDePerfil(uid),
     );
     _almacen.notificar();
+  }
+
+  String _escaparCsv(String valor) {
+    final limpio = valor.replaceAll('"', '""');
+    return '"$limpio"';
+  }
+
+  @override
+  Future<String> exportarCsv(FiltroCaja filtro) async {
+    final movs = _filtrar(filtro);
+    final sb = StringBuffer();
+    sb.writeln('Fecha;Tipo;Concepto;Medio de pago;Descripción;Monto;Estado');
+    for (final m in movs) {
+      sb.writeln(
+        [
+          _escaparCsv(formatearFechaHora(m.fecha)),
+          _escaparCsv(m.tipo.etiqueta),
+          _escaparCsv(m.concepto.etiqueta),
+          _escaparCsv(m.medioPago.etiqueta),
+          _escaparCsv(m.descripcionTexto),
+          _escaparCsv(m.montoConSigno.formatear(conSigno: true)),
+          _escaparCsv(m.anulado ? 'Anulado' : 'Registrado'),
+        ].join(';'),
+      );
+    }
+    return sb.toString();
   }
 }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:jereposteria/compartido/tipos/errores.dart';
 
 Future<bool> confirmar(
@@ -128,4 +129,70 @@ Future<void> ejecutarConManejo(
       mostrarError(context, e);
     }
   }
+}
+
+Future<void> mostrarDialogoExportacion(
+  BuildContext context, {
+  required String titulo,
+  required String nombreArchivo,
+  required String contenido,
+}) async {
+  await showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(titulo),
+      content: SizedBox(
+        width: 560,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Archivo sugerido: $nombreArchivo',
+              style: Theme.of(ctx).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 280),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: SingleChildScrollView(
+                  child: SelectableText(
+                    contenido,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: const Text('Cerrar'),
+        ),
+        FilledButton.icon(
+          onPressed: () async {
+            await Clipboard.setData(ClipboardData(text: contenido));
+            if (ctx.mounted) {
+              Navigator.of(ctx).pop();
+            }
+            if (context.mounted) {
+              mostrarExito(context, 'Copiado al portapapeles');
+            }
+          },
+          icon: const Icon(Icons.copy_outlined, size: 18),
+          label: const Text('Copiar al portapapeles'),
+        ),
+      ],
+    ),
+  );
 }

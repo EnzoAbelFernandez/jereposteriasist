@@ -54,3 +54,7 @@ Las tareas del mismo bloque que no dependen entre sí se pueden correr en parale
 | F2-04 | [F2-04-compras-sugeridas.md](file:///d:/projects/jereposteria/docs/tareas/F2-04-compras-sugeridas.md) | 🟡 | F2-01 | `features/compras/compras_sugeridas_pantalla.dart`, `compras_lista_pantalla.dart` |
 | F2-05 | [F2-05-reportes-financieros.md](file:///d:/projects/jereposteria/docs/tareas/F2-05-reportes-financieros.md) | 🟡 | Fase 1 | `features/reportes/reportes_pantalla.dart` |
 | F2-06 | [F2-06-reportes-rankings.md](file:///d:/projects/jereposteria/docs/tareas/F2-06-reportes-rankings.md) | 🟢 | F2-05 | `features/reportes/rankings_periodo_seccion.dart`, `reportes_pantalla.dart` |
+| **Fase 3 – Extras** |||||
+| F3-01 | [F3-01-whatsapp-cumpleanos.md](file:///d:/projects/jereposteria/docs/tareas/F3-01-whatsapp-cumpleanos.md) | 🟢 | Fase 1 | `features/clientes/cliente_detalle_pantalla.dart`, `features/alertas/alertas_pantalla.dart` |
+| F3-02 | [F3-02-exportar-caja-y-reportes.md](file:///d:/projects/jereposteria/docs/tareas/F3-02-exportar-caja-y-reportes.md) | 🟢 | Fase 2 | `features/caja/caja_pantalla.dart`, `features/reportes/reportes_pantalla.dart` |
+| F3-03 | [F3-03-rol-jefe-y-backup.md](file:///d:/projects/jereposteria/docs/tareas/F3-03-rol-jefe-y-backup.md) | 🟢 | Fase 1 | `features/equipo/equipo_permisos_pantalla.dart`, `features/equipo/configuracion_pantalla.dart` |
