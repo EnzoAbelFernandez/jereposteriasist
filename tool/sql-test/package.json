@@ -1,0 +1,1 @@
+{"name":"sql-test","private":true,"type":"module","scripts":{"test":"node run.mjs"},"dependencies":{"@electric-sql/pglite":"^0.5.11"}}

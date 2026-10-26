@@ -1,0 +1,31 @@
+# Secretos
+.env
+.env.*
+!.env.example
+**/supabase/.temp/
+**/supabase/.branches/
+
+# Flutter / Dart
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/build/
+app/.pub-cache/
+app/.pub/
+app/coverage/
+app/**/GeneratedPluginRegistrant.*
+app/android/.gradle/
+app/android/local.properties
+app/android/key.properties
+app/android/app/upload-keystore.jks
+app/windows/flutter/ephemeral/
+
+# Editores / SO
+tool/sql-test/node_modules/
+.idea/
+*.iml
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
