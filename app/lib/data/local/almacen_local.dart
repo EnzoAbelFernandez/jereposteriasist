@@ -11,6 +11,7 @@ import 'package:jereposteria/data/modelos/pedidos_modelos.dart';
 import 'package:jereposteria/data/modelos/produccion_modelos.dart';
 import 'package:jereposteria/data/modelos/productos_modelos.dart';
 import 'package:jereposteria/data/modelos/proveedores_modelos.dart';
+import 'package:jereposteria/data/modelos/recetas_reportes_modelos.dart';
 import 'package:jereposteria/data/modelos/stock_modelos.dart';
 import 'package:jereposteria/data/modelos/tareas_modelos.dart';
 import 'package:uuid/uuid.dart';
@@ -47,6 +48,8 @@ class AlmacenLocal {
   final Map<String, Proveedor> proveedores = {};
   final Map<String, Insumo> insumos = {};
   final Map<String, Producto> productos = {};
+  final Map<String, Receta> recetas = {};
+  final Map<String, List<RecetaItem>> recetaItems = {};
   final Map<String, Pedido> pedidos = {};
   final Map<String, List<PedidoItem>> pedidoItems = {};
   final Map<String, Compra> compras = {};

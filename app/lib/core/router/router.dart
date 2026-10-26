@@ -118,6 +118,18 @@ const List<_DestinoMenu> _destinosMenu = [
     modulo: Modulo.catalogo,
   ),
   _DestinoMenu(
+    ruta: Rutas.recetas,
+    etiqueta: 'Recetas',
+    icono: Icons.menu_book_outlined,
+    modulo: Modulo.produccion,
+  ),
+  _DestinoMenu(
+    ruta: Rutas.reportes,
+    etiqueta: 'Reportes',
+    icono: Icons.bar_chart_outlined,
+    modulo: Modulo.reportes,
+  ),
+  _DestinoMenu(
     ruta: Rutas.tareas,
     etiqueta: 'Tareas',
     icono: Icons.task_alt_outlined,
@@ -166,17 +178,27 @@ class _ShellAdaptativo extends ConsumerWidget {
       return Scaffold(
         body: Row(
           children: [
-            NavigationRail(
-              selectedIndex: idx,
-              labelType: NavigationRailLabelType.all,
-              onDestinationSelected: (i) => context.go(visibles[i].ruta),
-              destinations: [
-                for (final d in visibles)
-                  NavigationRailDestination(
-                    icon: Icon(d.icono),
-                    label: Text(d.etiqueta),
+            LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: NavigationRail(
+                      selectedIndex: idx,
+                      labelType: NavigationRailLabelType.all,
+                      onDestinationSelected: (i) =>
+                          context.go(visibles[i].ruta),
+                      destinations: [
+                        for (final d in visibles)
+                          NavigationRailDestination(
+                            icon: Icon(d.icono),
+                            label: Text(d.etiqueta),
+                          ),
+                      ],
+                    ),
                   ),
-              ],
+                ),
+              ),
             ),
             const VerticalDivider(width: 1),
             Expanded(child: child),
@@ -185,17 +207,54 @@ class _ShellAdaptativo extends ConsumerWidget {
       );
     }
 
-    final compactos = visibles.take(5).toList();
-    final idxCompacto = idx < compactos.length ? idx : 0;
+    final principales = visibles.take(4).toList();
+    final tieneMas = visibles.length > 4;
+    final idxCompacto = idx < principales.length ? idx : principales.length;
     return Scaffold(
       body: child,
-      bottomNavigationBar: compactos.length >= 2
+      bottomNavigationBar: principales.length >= 2
           ? NavigationBar(
-              selectedIndex: idxCompacto,
-              onDestinationSelected: (i) => context.go(compactos[i].ruta),
+              selectedIndex: tieneMas
+                  ? idxCompacto
+                  : idx.clamp(0, principales.length - 1),
+              onDestinationSelected: (i) {
+                if (tieneMas && i == principales.length) {
+                  showModalBottomSheet<void>(
+                    context: context,
+                    showDragHandle: true,
+                    builder: (ctx) => SafeArea(
+                      child: ListView(
+                        shrinkWrap: true,
+                        children: [
+                          for (final d in visibles)
+                            ListTile(
+                              leading: Icon(d.icono),
+                              title: Text(d.etiqueta),
+                              selected:
+                                  ubicacion == d.ruta ||
+                                  (d.ruta != Rutas.inicio &&
+                                      ubicacion.startsWith(d.ruta)),
+                              onTap: () {
+                                Navigator.of(ctx).pop();
+                                context.go(d.ruta);
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                  return;
+                }
+                context.go(principales[i].ruta);
+              },
               destinations: [
-                for (final d in compactos)
+                for (final d in principales)
                   NavigationDestination(icon: Icon(d.icono), label: d.etiqueta),
+                if (tieneMas)
+                  const NavigationDestination(
+                    icon: Icon(Icons.menu),
+                    label: 'Más',
+                  ),
               ],
             )
           : null,

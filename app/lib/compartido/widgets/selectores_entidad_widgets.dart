@@ -394,3 +394,30 @@ class SelectorPedido extends ConsumerWidget {
     );
   }
 }
+
+class SelectorReceta extends ConsumerWidget {
+  const SelectorReceta({
+    super.key,
+    this.recetaId,
+    required this.onChanged,
+    this.obligatorio = false,
+  });
+
+  final String? recetaId;
+  final ValueChanged<RecetaResumen?> onChanged;
+  final bool obligatorio;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncItems = ref.watch(recetasProvider(''));
+    return _SelectorEntidadBase<RecetaResumen>(
+      etiqueta: 'Receta',
+      obligatorio: obligatorio,
+      asyncOpciones: asyncItems,
+      idSeleccionado: recetaId,
+      idDe: (r) => r.receta.id,
+      textoDe: (r) => '${r.receta.nombre} (${r.receta.rindeTexto})',
+      onChanged: onChanged,
+    );
+  }
+}

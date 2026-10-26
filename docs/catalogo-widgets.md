@@ -50,6 +50,7 @@ Todos aceptan `etiqueta`, `obligatorio` (agrega validación y un asterisco) y se
 | `SelectorCategoriaGasto({String? categoriaId, required ValueChanged<CategoriaGasto?> onChanged, bool obligatorio = false})` | `CategoriaGasto?` | |
 | `SelectorPerfil({String? perfilId, required ValueChanged<Perfil?> onChanged, bool obligatorio = false})` | `Perfil?` | Empleados activos. |
 | `SelectorPedido({String? pedidoId, required ValueChanged<PedidoResumen?> onChanged, bool obligatorio = false})` | `PedidoResumen?` | Solo pedidos activos. |
+| `SelectorReceta({String? recetaId, required ValueChanged<RecetaResumen?> onChanged, bool obligatorio = false})` | `RecetaResumen?` | Recetas activas. |
 | `BotonGuardar({required Future<void> Function() onGuardar, String texto = 'Guardar'})` | — | Muestra spinner, deshabilita doble toque y **captura errores** (`ErrorDeNegocio` → mensaje). |
 
 ## Diálogos y mensajes

@@ -123,5 +123,87 @@ void main() {
       final trasOverride = await clientesRepo.observarPorId(clienteId).first;
       expect(trasOverride?.esHabitual, isFalse);
     });
+
+    test('Recetas calculan costo del producto y compras sugeridas según pedidos activos', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final insumosRepo = container.read(insumosRepositorioProvider);
+      final comprasRepo = container.read(comprasRepositorioProvider);
+      final productosRepo = container.read(productosRepositorioProvider);
+      final recetasRepo = container.read(recetasRepositorioProvider);
+      final clientesRepo = container.read(clientesRepositorioProvider);
+      final pedidosRepo = container.read(pedidosRepositorioProvider);
+      final reportesRepo = container.read(reportesRepositorioProvider);
+
+      final harinaId = await insumosRepo.crear(
+        InsumoDatos(
+          nombre: 'Harina 0000',
+          unidad: Unidad.gramos,
+          stockMinimo: 1000,
+        ),
+      );
+
+      await comprasRepo.registrar(
+        CompraDatos(
+          fecha: DateTime.now(),
+          medioPago: MedioPago.efectivo,
+          items: [
+            CompraItemDatos(
+              insumoId: harinaId,
+              cantidad: 1000,
+              precioTotal: Dinero.pesos(2000),
+            ),
+          ],
+        ),
+      );
+
+      final prodId = await productosRepo.crear(
+        ProductoDatos(
+          nombre: 'Torta Clásica',
+          categoria: CategoriaProducto.torta,
+          precioBase: Dinero.pesos(10000),
+        ),
+      );
+
+      await recetasRepo.crear(
+        RecetaDatos(
+          nombre: 'Receta Torta Clásica',
+          productoId: prodId,
+          rindeCantidad: 1,
+          items: [RecetaItemDatos(insumoId: harinaId, cantidad: 500)],
+        ),
+      );
+
+      final costo = await recetasRepo.observarCostoDeProducto(prodId).first;
+      expect(costo?.costoUnitario, Dinero.pesos(1000));
+      expect(costo?.margenPorcentaje, 90);
+
+      final cliId = await clientesRepo.crear(
+        ClienteDatos(nombre: 'Cliente Test'),
+      );
+      await pedidosRepo.crear(
+        PedidoDatos(
+          clienteId: cliId,
+          fechaEntrega: DateTime.now().add(const Duration(days: 2)),
+          items: [
+            PedidoItemDatos(
+              productoId: prodId,
+              descripcion: 'Torta Clásica',
+              cantidad: 2,
+              precioUnitario: Dinero.pesos(10000),
+            ),
+          ],
+        ),
+      );
+
+      final sugeridas = await reportesRepo
+          .observarComprasSugeridas(diasHorizonte: 7)
+          .first;
+      expect(sugeridas.items.length, 1);
+      expect(sugeridas.items.first.requeridoPorPedidos, 1000);
+      expect(sugeridas.items.first.sugeridoComprar, 1000);
+      expect(sugeridas.costoTotalEstimado, Dinero.pesos(2000));
+    });
   });
 }

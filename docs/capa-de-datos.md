@@ -442,3 +442,70 @@ final estadoSyncProvider = StreamProvider<EstadoSync>(...);
 class EstadoSync { bool conectado; bool subiendo; bool bajando; DateTime? ultimaSync; int cambiosPendientes; }
 ```
 Lo muestra el núcleo (ícono en la barra). Las pantallas no lo necesitan.
+
+### 4.15 Recetas y costeo (Fase 2) — `RecetasRepositorio`
+```dart
+class Receta { String id; String nombre; String? productoId; int rindeCantidad; String? rindeDescripcion; String? notas; DateTime? archivadoEn; bool get archivada; String get rindeTexto; }
+class RecetaItem { String id; String recetaId; String insumoId; int cantidad; }
+class RecetaItemDetalle { RecetaItem item; String insumoNombre; Unidad unidad; Dinero? costoEstimado; String get cantidadTexto; }
+class RecetaResumen { Receta receta; String? productoNombre; int cantidadIngredientes; Dinero costoTotalEstimado; bool tieneCostoCompleto; Dinero get costoPorUnidadRinde; }
+class RecetaDetalle {
+  Receta receta; String? productoNombre; List<RecetaItemDetalle> items; bool tieneCostoCompleto;
+  Dinero get costoTotalEstimado; Dinero get costoPorUnidadRinde;
+  List<ConsumoDatos> escalarConsumos({int lotes = 1});
+}
+class RecetaItemDatos { String insumoId; int cantidad; }
+class RecetaDatos { String nombre; String? productoId; int rindeCantidad; String? rindeDescripcion; String? notas; List<RecetaItemDatos> items; factory RecetaDatos.desde(RecetaDetalle d); }
+
+class CostoProductoEstimado {
+  String productoId; String recetaId; String recetaNombre; Dinero costoUnitario; Dinero? precioVenta; bool tieneCostoCompleto;
+  Dinero? get margenUnitario;       // precioVenta - costoUnitario
+  int? get margenPorcentaje;        // 0..100
+  Dinero precioSugerido({int multiplicadorCosto = 3});
+}
+
+abstract class RecetasRepositorio {
+  Stream<List<RecetaResumen>> observarActivas({String busqueda = '', String? productoId});
+  Stream<RecetaDetalle?> observarDetalle(String id);
+  Stream<CostoProductoEstimado?> observarCostoDeProducto(String productoId);
+  Future<String> crear(RecetaDatos datos);
+  Future<void> actualizar(String id, RecetaDatos datos);
+  Future<void> archivar(String id);
+}
+```
+Providers: `recetasRepositorioProvider`, `recetasProvider` (family String busqueda), `recetaDetalleProvider` (family String id), `costoProductoProvider` (family String productoId).
+
+### 4.16 Compras sugeridas y reportes (Fase 2) — `ReportesRepositorio`
+```dart
+class ItemCompraSugerida {
+  Insumo insumo; int stockActual; int stockMinimo; int requeridoPorPedidos; int sugeridoComprar; Dinero? costoEstimado;
+  String get stockActualTexto; String get stockMinimoTexto; String get requeridoTexto; String get sugeridoTexto;
+}
+class ResumenComprasSugeridas { int diasHorizonte; int pedidosActivosEnHorizonte; List<ItemCompraSugerida> items; Dinero get costoTotalEstimado; }
+
+class PeriodoMensual {
+  int anio; int mes;
+  factory PeriodoMensual.actual();
+  PeriodoMensual get anterior; PeriodoMensual get siguiente;
+  String get etiqueta; // "Octubre 2026"
+}
+class GastoPorCategoria { String categoriaId; String categoriaNombre; Dinero monto; int porcentajeEntero; }
+class ResumenFinancieroMensual {
+  PeriodoMensual periodo;
+  Dinero ingresosPedidos; Dinero otrosIngresos;
+  Dinero egresosCompras; Dinero egresosGastos; Dinero otrosEgresos;
+  int pedidosEntregados; int pedidosCancelados;
+  List<GastoPorCategoria> gastosPorCategoria;
+  Dinero get totalIngresos; Dinero get totalEgresos; Dinero get resultadoNeto;
+}
+class RankingProducto { String nombre; String? productoId; int unidadesVendidas; Dinero ingresosTotales; }
+class RankingCliente { String clienteId; String nombre; bool esHabitual; int cantidadPedidos; Dinero montoTotal; }
+class RankingsPeriodo { PeriodoMensual periodo; List<RankingProducto> productosMasVendidos; List<RankingCliente> mejoresClientes; }
+
+abstract class ReportesRepositorio {
+  Stream<ResumenComprasSugeridas> observarComprasSugeridas({int diasHorizonte = 7});
+  Stream<ResumenFinancieroMensual> observarResumenFinanciero(PeriodoMensual periodo);
+  Stream<RankingsPeriodo> observarRankings(PeriodoMensual periodo);
+}
+```
+Providers: `reportesRepositorioProvider`, `comprasSugeridasProvider` (family int diasHorizonte), `resumenFinancieroMensualProvider` (family `PeriodoMensual`), `rankingsPeriodoProvider` (family `PeriodoMensual`).

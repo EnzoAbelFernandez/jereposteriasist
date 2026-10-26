@@ -47,3 +47,10 @@ Las tareas del mismo bloque que no dependen entre sí se pueden correr en parale
 | F1-22 | [F1-22-alertas.md](file:///d:/projects/jereposteria/docs/tareas/F1-22-alertas.md) | 🟢 | Fase 0 | `features/alertas/alertas_pantalla.dart` |
 | F1-23 | [F1-23-inicio.md](file:///d:/projects/jereposteria/docs/tareas/F1-23-inicio.md) | 🟡 | F1-22 | `features/inicio/inicio_pantalla.dart` |
 | F1-24 | [F1-24-notificaciones-push.md](file:///d:/projects/jereposteria/docs/tareas/F1-24-notificaciones-push.md) | 🔴 | F1-22 + Firebase | modelo fuerte |
+| **Fase 2 – Recetas, costos y reportes** |||||
+| F2-01 | [F2-01-recetas.md](file:///d:/projects/jereposteria/docs/tareas/F2-01-recetas.md) | 🟢 | Fase 1 | `features/catalogo/recetas_lista_pantalla.dart`, `receta_formulario_pantalla.dart` |
+| F2-02 | [F2-02-produccion-desde-receta.md](file:///d:/projects/jereposteria/docs/tareas/F2-02-produccion-desde-receta.md) | 🟢 | F2-01 | `features/produccion/produccion_formulario_pantalla.dart` |
+| F2-03 | [F2-03-costo-producto.md](file:///d:/projects/jereposteria/docs/tareas/F2-03-costo-producto.md) | 🟢 | F2-01 | `features/catalogo/productos_lista_pantalla.dart`, `producto_formulario_pantalla.dart` |
+| F2-04 | [F2-04-compras-sugeridas.md](file:///d:/projects/jereposteria/docs/tareas/F2-04-compras-sugeridas.md) | 🟡 | F2-01 | `features/compras/compras_sugeridas_pantalla.dart`, `compras_lista_pantalla.dart` |
+| F2-05 | [F2-05-reportes-financieros.md](file:///d:/projects/jereposteria/docs/tareas/F2-05-reportes-financieros.md) | 🟡 | Fase 1 | `features/reportes/reportes_pantalla.dart` |
+| F2-06 | [F2-06-reportes-rankings.md](file:///d:/projects/jereposteria/docs/tareas/F2-06-reportes-rankings.md) | 🟢 | F2-05 | `features/reportes/rankings_periodo_seccion.dart`, `reportes_pantalla.dart` |
