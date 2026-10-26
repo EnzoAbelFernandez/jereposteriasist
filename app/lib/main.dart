@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:jereposteria/core/config/entorno.dart';
 import 'package:jereposteria/core/router/router.dart';
 import 'package:jereposteria/core/tema/tema.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Supabase.initialize(
+      url: EntornoApp.supabaseUrl,
+      publishableKey: EntornoApp.supabasePublishableKey,
+    );
+  } catch (_) {
+    // Permite seguir operando en modo local/offline si no hay red al iniciar.
+  }
   runApp(const ProviderScope(child: JeReposteriaApp()));
 }
 
