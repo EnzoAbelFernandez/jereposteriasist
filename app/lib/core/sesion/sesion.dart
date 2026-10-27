@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jereposteria/compartido/tipos/enums.dart';
 import 'package:jereposteria/compartido/tipos/errores.dart';
+import 'package:jereposteria/core/notificaciones/notificaciones_push.dart';
 import 'package:jereposteria/data/local/almacen_local.dart';
 import 'package:jereposteria/data/modelos/alertas_equipo_modelos.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -107,6 +110,7 @@ class SesionController {
           );
           _almacen.conectadoAInternet = true;
           _almacen.usuarioActualId = user.id;
+          unawaited(ServicioNotificacionesPush.registrarTokenEnSupabase());
           return;
         }
       } on AuthException catch (e) {

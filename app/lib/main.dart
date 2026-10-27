@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jereposteria/core/config/entorno.dart';
+import 'package:jereposteria/core/notificaciones/notificaciones_push.dart';
 import 'package:jereposteria/core/router/router.dart';
 import 'package:jereposteria/core/tema/tema.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -16,6 +17,7 @@ Future<void> main() async {
   } catch (_) {
     // Permite seguir operando en modo local/offline si no hay red al iniciar.
   }
+  await ServicioNotificacionesPush.inicializar();
   runApp(const ProviderScope(child: JeReposteriaApp()));
 }
 

@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+*firebase-adminsdk*.json
+firebase-service-account.json
 **/supabase/.temp/
 **/supabase/.branches/
 

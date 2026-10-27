@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jereposteria/compartido/tipos/enums.dart';
+import 'package:jereposteria/core/notificaciones/notificaciones_push.dart';
 import 'package:jereposteria/data/modelos/alertas_equipo_modelos.dart';
 import 'package:jereposteria/data/modelos/caja_modelos.dart';
 import 'package:jereposteria/data/modelos/clientes_modelos.dart';
@@ -188,6 +189,14 @@ class AlmacenLocal {
       entidadTipo: 'insumo',
       entidadId: insumo.id,
       creadoEn: DateTime.now(),
+    );
+    unawaited(
+      ServicioNotificacionesPush.mostrarNotificacionLocal(
+        id: clave.hashCode,
+        titulo: 'Falta ${insumo.nombre}',
+        cuerpo:
+            'Quedan ${insumo.unidad.formatear(actual)} (mínimo ${insumo.unidad.formatear(insumo.stockMinimo)}).',
+      ),
     );
   }
 

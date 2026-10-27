@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "341614298793",
+    "project_id": "jereposteria",
+    "storage_bucket": "jereposteria.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:341614298793:android:3199096fe3815e3d49cbb8",
+        "android_client_info": {
+          "package_name": "com.jereposteria.jereposteria"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBljxMElLWBgPcpmXgXFdj1l_e6SRLwu7M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
