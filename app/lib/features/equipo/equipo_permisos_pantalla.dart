@@ -17,6 +17,38 @@ class _EquipoPermisosPantallaState
     extends ConsumerState<EquipoPermisosPantalla> {
   bool _procesando = false;
 
+  Future<void> _cambiarRol(Perfil perfil) async {
+    if (_procesando) return;
+    final nuevoRol = perfil.esJefe ? Rol.empleado : Rol.jefe;
+    final titulo = perfil.esJefe ? 'Pasar a empleado' : 'Convertir en jefe';
+    final mensaje = perfil.esJefe
+        ? '¿Seguro que querés pasar a ${perfil.nombre} al rol de empleado?'
+        : '¿Seguro que querés darle rol de jefe con acceso total a ${perfil.nombre}?';
+
+    final ok = await confirmar(
+      context,
+      titulo: titulo,
+      mensaje: mensaje,
+      textoConfirmar: 'Confirmar',
+      peligroso: perfil.esJefe,
+    );
+    if (!ok || !mounted) return;
+
+    setState(() => _procesando = true);
+    try {
+      await ejecutarConManejo(
+        context,
+        () =>
+            ref.read(equipoRepositorioProvider).cambiarRol(perfil.id, nuevoRol),
+        mensajeExito: 'Rol actualizado',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _procesando = false);
+      }
+    }
+  }
+
   Future<void> _cambiarPermiso(Modulo modulo, NivelPermiso nuevoNivel) async {
     if (_procesando) return;
     setState(() => _procesando = true);
@@ -130,10 +162,30 @@ class _EquipoPermisosPantallaState
 
   Widget _construirCuerpo(Perfil perfil, Map<Modulo, NivelPermiso> permisos) {
     final tema = Theme.of(context);
+    final miPerfil = ref.watch(perfilActualProvider).asData?.value;
 
     return ListView(
       padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 48),
       children: [
+        if (miPerfil?.id != perfil.id)
+          TarjetaSeccion(
+            titulo: 'Rol en el equipo',
+            children: [
+              Text(
+                perfil.esJefe
+                    ? 'Rol actual: Jefe (acceso total a todos los módulos)'
+                    : 'Rol actual: Empleado (acceso según permisos por módulo)',
+              ),
+              Separacion.chica,
+              OutlinedButton.icon(
+                onPressed: _procesando ? null : () => _cambiarRol(perfil),
+                icon: const Icon(Icons.admin_panel_settings_outlined),
+                label: Text(
+                  perfil.esJefe ? 'Pasar a empleado' : 'Convertir en jefe',
+                ),
+              ),
+            ],
+          ),
         if (perfil.esJefe) ...[
           Card(
             color: tema.colorScheme.surfaceContainerHighest,

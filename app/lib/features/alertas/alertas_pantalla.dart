@@ -75,39 +75,71 @@ class _AlertasPantallaState extends ConsumerState<AlertasPantalla> {
                 icono: Icons.notifications_none,
                 mensaje: 'No tenés alertas pendientes',
               ),
-              itemBuilder: (context, a) {
-                return ListTile(
-                  leading: IconoAlerta(a.tipo),
-                  title: Text(
-                    a.titulo,
-                    style: !a.leida
-                        ? const TextStyle(fontWeight: FontWeight.bold)
-                        : null,
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (a.mensaje.isNotEmpty) Text(a.mensaje),
-                      Text(
-                        formatearFechaHora(a.creadoEn),
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                  onTap: () {
-                    if (!a.leida) {
-                      ref.read(alertasRepositorioProvider).marcarLeida(a.id);
-                    }
-                    if (a.rutaDestino != null) {
-                      context.push(a.rutaDestino!);
-                    }
-                  },
-                );
-              },
+              itemBuilder: (context, a) => _ItemAlerta(alerta: a),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ItemAlerta extends ConsumerWidget {
+  const _ItemAlerta({required this.alerta});
+
+  final Alerta alerta;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final a = alerta;
+    Widget? trailing;
+
+    if (a.tipo == TipoAlerta.cumpleanos && a.entidadId != null) {
+      final cliente = ref.watch(clienteProvider(a.entidadId!)).asData?.value;
+      final tel = cliente?.telefono?.trim();
+      if (cliente != null && tel != null && tel.isNotEmpty) {
+        trailing = IconButton(
+          tooltip: 'Enviar saludo por WhatsApp',
+          icon: const Icon(Icons.chat_outlined),
+          onPressed: () {
+            if (!a.leida) {
+              ref.read(alertasRepositorioProvider).marcarLeida(a.id);
+            }
+            abrirWhatsApp(
+              cliente.telefono!,
+              mensaje:
+                  '¡Hola ${cliente.nombre}! Se acerca tu cumpleaños y queremos regalarte un descuento especial en tu próximo pedido 🎂',
+            );
+          },
+        );
+      }
+    }
+
+    return ListTile(
+      leading: IconoAlerta(a.tipo),
+      title: Text(
+        a.titulo,
+        style: !a.leida ? const TextStyle(fontWeight: FontWeight.bold) : null,
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (a.mensaje.isNotEmpty) Text(a.mensaje),
+          Text(
+            formatearFechaHora(a.creadoEn),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+      trailing: trailing,
+      onTap: () {
+        if (!a.leida) {
+          ref.read(alertasRepositorioProvider).marcarLeida(a.id);
+        }
+        if (a.rutaDestino != null) {
+          context.push(a.rutaDestino!);
+        }
+      },
     );
   }
 }

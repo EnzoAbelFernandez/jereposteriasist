@@ -103,6 +103,18 @@ class _CajaPantallaState extends ConsumerState<CajaPantalla> {
     );
   }
 
+  Future<void> _exportarCsv() async {
+    final csv = await ref.read(cajaRepositorioProvider).exportarCsv(_filtro);
+    if (!mounted) return;
+    await mostrarDialogoExportacion(
+      context,
+      titulo: 'Exportar movimientos de caja (CSV)',
+      nombreArchivo:
+          'caja_${_desde.year}_${_desde.month.toString().padLeft(2, '0')}.csv',
+      contenido: csv,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtroActual = _filtro;
@@ -111,6 +123,13 @@ class _CajaPantallaState extends ConsumerState<CajaPantalla> {
 
     return PantallaBase(
       titulo: 'Caja',
+      acciones: [
+        IconButton(
+          tooltip: 'Exportar CSV',
+          icon: const Icon(Icons.download_outlined),
+          onPressed: _exportarCsv,
+        ),
+      ],
       botonFlotante: RequierePermiso(
         modulo: Modulo.caja,
         nivel: NivelPermiso.cargar,

@@ -126,6 +126,17 @@ class ClienteDetallePantalla extends ConsumerWidget {
                           icon: const Icon(Icons.call_outlined),
                           label: const Text('Llamar'),
                         ),
+                        if (c.cumpleDia != null && c.cumpleMes != null)
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              final mensaje = c.esHabitual
+                                  ? '¡Hola ${c.nombre}! Se acerca tu cumpleaños y, por ser cliente habitual, queremos regalarte un descuento especial en tu próximo pedido 🎂'
+                                  : '¡Hola ${c.nombre}! Queremos desearte un muy feliz cumpleaños de parte de todo el equipo 🎂';
+                              abrirWhatsApp(c.telefono!, mensaje: mensaje);
+                            },
+                            icon: const Icon(Icons.cake_outlined),
+                            label: const Text('Saludo de cumpleaños'),
+                          ),
                       ],
                     ),
                   ],

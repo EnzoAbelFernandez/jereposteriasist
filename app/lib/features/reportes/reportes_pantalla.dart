@@ -15,12 +15,33 @@ class ReportesPantalla extends ConsumerStatefulWidget {
 class _ReportesPantallaState extends ConsumerState<ReportesPantalla> {
   PeriodoMensual _periodo = PeriodoMensual.actual();
 
+  Future<void> _exportarReporte() async {
+    final csv = await ref
+        .read(reportesRepositorioProvider)
+        .exportarResumenCsv(_periodo);
+    if (!mounted) return;
+    await mostrarDialogoExportacion(
+      context,
+      titulo: 'Exportar reporte mensual (CSV)',
+      nombreArchivo:
+          'reporte_${_periodo.anio}_${_periodo.mes.toString().padLeft(2, '0')}.csv',
+      contenido: csv,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final asyncResumen = ref.watch(resumenFinancieroMensualProvider(_periodo));
 
     return PantallaBase(
       titulo: 'Reportes',
+      acciones: [
+        IconButton(
+          tooltip: 'Exportar reporte CSV',
+          icon: const Icon(Icons.download_outlined),
+          onPressed: _exportarReporte,
+        ),
+      ],
       cuerpo: Column(
         children: [
           Padding(

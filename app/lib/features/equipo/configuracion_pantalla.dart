@@ -46,12 +46,33 @@ class _ConfiguracionPantallaState extends ConsumerState<ConfiguracionPantalla> {
     }
   }
 
+  Future<void> _exportarBackup() async {
+    final json = await ref
+        .read(configuracionRepositorioProvider)
+        .exportarBackupJson();
+    if (mounted) {
+      await mostrarDialogoExportacion(
+        context,
+        titulo: 'Copia de seguridad (JSON)',
+        nombreArchivo: 'respaldo_jereposteria.json',
+        contenido: json,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final asyncConfig = ref.watch(configuracionProvider);
 
     return PantallaBase(
       titulo: 'Configuración',
+      acciones: [
+        IconButton(
+          tooltip: 'Exportar respaldo',
+          icon: const Icon(Icons.backup_outlined),
+          onPressed: _exportarBackup,
+        ),
+      ],
       cuerpo: VistaAsync<Configuracion>(
         valor: asyncConfig,
         builder: (context, config) {
