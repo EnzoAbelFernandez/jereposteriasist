@@ -111,6 +111,7 @@ class SesionController {
           _almacen.conectadoAInternet = true;
           _almacen.usuarioActualId = user.id;
           unawaited(ServicioNotificacionesPush.registrarTokenEnSupabase());
+          ServicioNotificacionesPush.suscribirAlertasTiempoReal();
           return;
         }
       } on AuthException catch (e) {

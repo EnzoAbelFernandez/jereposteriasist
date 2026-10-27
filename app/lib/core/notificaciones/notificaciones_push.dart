@@ -33,53 +33,108 @@ class ServicioNotificacionesPush {
   static bool get _esAndroid =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
+  static bool get _esWindows =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+
+  static RealtimeChannel? _canalAlertasSupabase;
+
   static Future<void> inicializar() async {
     if (_inicializado) return;
     _inicializado = true;
 
-    if (!_esAndroid) return;
-
     try {
-      await Firebase.initializeApp();
-      FirebaseMessaging.onBackgroundMessage(manejarMensajeEnSegundoPlano);
-
       const configAndroid = AndroidInitializationSettings(
         '@mipmap/ic_launcher',
       );
-      const configInicial = InitializationSettings(android: configAndroid);
+      const configWindows = WindowsInitializationSettings(
+        appName: 'JeRepostería',
+        appUserModelId: 'com.jereposteria.jereposteria',
+        guid: 'd84b0f31-95d7-4f6a-9f88-58c2c7e3b901',
+      );
+      const configInicial = InitializationSettings(
+        android: configAndroid,
+        windows: configWindows,
+      );
       await _notificacionesLocales.initialize(configInicial);
 
-      final pluginAndroid = _notificacionesLocales
-          .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin
-          >();
-      await pluginAndroid?.createNotificationChannel(_canalAndroid);
+      if (_esAndroid) {
+        await Firebase.initializeApp();
+        FirebaseMessaging.onBackgroundMessage(manejarMensajeEnSegundoPlano);
 
-      await FirebaseMessaging.instance.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+        final pluginAndroid = _notificacionesLocales
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
+        await pluginAndroid?.createNotificationChannel(_canalAndroid);
 
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        final notif = message.notification;
-        if (notif != null) {
-          mostrarNotificacionLocal(
-            id: message.hashCode,
-            titulo: notif.title ?? 'JeRepostería',
-            cuerpo: notif.body ?? '',
-          );
-        }
-      });
+        await FirebaseMessaging.instance.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
 
-      FirebaseMessaging.instance.onTokenRefresh.listen((nuevoToken) {
-        unawaited(registrarTokenEnSupabase(tokenExplicito: nuevoToken));
-      });
+        FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+          final notif = message.notification;
+          if (notif != null) {
+            mostrarNotificacionLocal(
+              id: message.hashCode,
+              titulo: notif.title ?? 'JeRepostería',
+              cuerpo: notif.body ?? '',
+            );
+          }
+        });
 
-      unawaited(registrarTokenEnSupabase());
+        FirebaseMessaging.instance.onTokenRefresh.listen((nuevoToken) {
+          unawaited(registrarTokenEnSupabase(tokenExplicito: nuevoToken));
+        });
+
+        unawaited(registrarTokenEnSupabase());
+      } else if (_esWindows) {
+        suscribirAlertasTiempoReal();
+      }
     } catch (_) {
-      // Si Firebase no está disponible en el entorno actual, continúa sin interrumpir la app.
+      // Si Firebase o el subsistema nativo no está disponible, continúa sin interrumpir la app.
     }
+  }
+
+  /// En Windows Desktop escucha en tiempo real las alertas nuevas en Supabase
+  /// para el usuario actual y dispara una notificación nativa de Windows.
+  static void suscribirAlertasTiempoReal() {
+    if (!_esWindows) return;
+    try {
+      final client = Supabase.instance.client;
+      final user = client.auth.currentUser;
+      if (user == null) return;
+
+      _canalAlertasSupabase?.unsubscribe();
+      _canalAlertasSupabase = client
+          .channel('alertas_windows_${user.id}')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.insert,
+            schema: 'public',
+            table: 'alertas',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'destinatario_id',
+              value: user.id,
+            ),
+            callback: (payload) {
+              final nuevo = payload.newRecord;
+              final titulo = (nuevo['titulo'] as String?) ?? 'JeRepostería';
+              final mensaje = (nuevo['mensaje'] as String?) ?? '';
+              final idStr =
+                  (nuevo['id'] as String?) ?? DateTime.now().toIso8601String();
+              unawaited(
+                mostrarNotificacionLocal(
+                  id: idStr.hashCode,
+                  titulo: titulo,
+                  cuerpo: mensaje,
+                ),
+              );
+            },
+          )
+          .subscribe();
+    } catch (_) {}
   }
 
   static Future<void> mostrarNotificacionLocal({
@@ -87,7 +142,7 @@ class ServicioNotificacionesPush {
     required String titulo,
     required String cuerpo,
   }) async {
-    if (!_esAndroid) return;
+    if (!_esAndroid && !_esWindows) return;
     try {
       await _notificacionesLocales.show(
         id,
@@ -102,6 +157,7 @@ class ServicioNotificacionesPush {
             priority: Priority.high,
             icon: '@mipmap/ic_launcher',
           ),
+          windows: const WindowsNotificationDetails(),
         ),
       );
     } catch (_) {}
