@@ -44,6 +44,18 @@ class AlmacenLocal extends ChangeNotifier {
   String? get usuarioActualId => _usuarioActualId;
   set usuarioActualId(String? valor) {
     _usuarioActualId = valor;
+    if (valor != null && !perfiles.containsKey(valor)) {
+      perfiles[valor] = Perfil(
+        id: valor,
+        nombre: valor == idJefeLocal ? 'Jere' : 'Usuario',
+        rol: Rol.jefe,
+        activo: true,
+      );
+      permisos.putIfAbsent(
+        valor,
+        () => {for (final m in Modulo.values) m: NivelPermiso.editar},
+      );
+    }
     notificar();
   }
 

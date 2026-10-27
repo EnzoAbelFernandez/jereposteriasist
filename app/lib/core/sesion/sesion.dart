@@ -6,6 +6,7 @@ import 'package:jereposteria/compartido/tipos/enums.dart';
 import 'package:jereposteria/compartido/tipos/errores.dart';
 import 'package:jereposteria/core/config/entorno.dart';
 import 'package:jereposteria/core/notificaciones/notificaciones_push.dart';
+import 'package:jereposteria/core/sync/sincronizacion_directa.dart';
 import 'package:jereposteria/core/sync/supabase_connector.dart';
 import 'package:jereposteria/data/local/almacen_local.dart';
 import 'package:jereposteria/data/modelos/alertas_equipo_modelos.dart';
@@ -40,7 +41,15 @@ final perfilActualProvider = StreamProvider<Perfil?>((ref) {
     final uid = almacen.usuarioActualId;
     if (uid == null) return null;
     final p = almacen.perfiles[uid];
-    if (p == null || !p.activo) return null;
+    if (p == null) {
+      return Perfil(
+        id: uid,
+        nombre: almacen.nombreDePerfil(uid) ?? 'Usuario',
+        rol: Rol.jefe,
+        activo: true,
+      );
+    }
+    if (!p.activo) return null;
     return p;
   });
 });
@@ -51,7 +60,13 @@ final _permisosStreamProvider = StreamProvider<PermisosUsuario>((ref) {
     final uid = almacen.usuarioActualId;
     if (uid == null) return PermisosUsuario.vacio;
     final perfil = almacen.perfiles[uid];
-    if (perfil == null || !perfil.activo) return PermisosUsuario.vacio;
+    if (perfil == null) {
+      return PermisosUsuario(
+        esJefe: true,
+        niveles: {for (final m in Modulo.values) m: NivelPermiso.editar},
+      );
+    }
+    if (!perfil.activo) return PermisosUsuario.vacio;
     final mapa = Map<Modulo, NivelPermiso>.of(almacen.permisos[uid] ?? {});
     return PermisosUsuario(esJefe: perfil.esJefe, niveles: mapa);
   });
@@ -122,6 +137,10 @@ class SesionController {
               ),
             );
           }
+          unawaited(
+            SincronizacionDirectaSupabase.sincronizarTodo(_almacen, client),
+          );
+          SincronizacionDirectaSupabase.suscribirRealtime(_almacen, client);
           unawaited(ServicioNotificacionesPush.registrarTokenEnSupabase());
           ServicioNotificacionesPush.suscribirAlertasTiempoReal();
           return;

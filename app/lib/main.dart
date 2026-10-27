@@ -7,6 +7,7 @@ import 'package:jereposteria/core/config/entorno.dart';
 import 'package:jereposteria/core/notificaciones/notificaciones_push.dart';
 import 'package:jereposteria/core/router/router.dart';
 import 'package:jereposteria/core/sync/powersync_database.dart';
+import 'package:jereposteria/core/sync/sincronizacion_directa.dart';
 import 'package:jereposteria/core/tema/tema.dart';
 import 'package:jereposteria/data/data.dart';
 import 'package:powersync/powersync.dart';
@@ -40,7 +41,32 @@ Future<void> main() async {
   try {
     final session = Supabase.instance.client.auth.currentSession;
     if (session != null) {
-      almacen.usuarioActualId = session.user.id;
+      final user = session.user;
+      final nombre =
+          (user.userMetadata?['nombre'] as String?)?.trim().isNotEmpty == true
+          ? (user.userMetadata!['nombre'] as String).trim()
+          : (user.email?.split('@').first ?? 'Enzo');
+      almacen.perfiles[user.id] = Perfil(
+        id: user.id,
+        nombre: nombre,
+        rol: Rol.jefe,
+        activo: true,
+      );
+      almacen.permisos[user.id] = {
+        for (final m in Modulo.values) m: NivelPermiso.editar,
+      };
+      almacen.usuarioActualId = user.id;
+
+      unawaited(
+        SincronizacionDirectaSupabase.sincronizarTodo(
+          almacen,
+          Supabase.instance.client,
+        ),
+      );
+      SincronizacionDirectaSupabase.suscribirRealtime(
+        almacen,
+        Supabase.instance.client,
+      );
     } else {
       almacen.usuarioActualId = null;
     }

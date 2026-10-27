@@ -21,6 +21,9 @@ Future<PowerSyncDatabase?> inicializarPowerSync() async {
 
   try {
     final dir = await getApplicationSupportDirectory();
+    if (!dir.existsSync()) {
+      await dir.create(recursive: true);
+    }
     final dbPath = p.join(dir.path, 'jereposteria.powersync.db');
 
     final db = PowerSyncDatabase(schema: powersyncSchema, path: dbPath);
