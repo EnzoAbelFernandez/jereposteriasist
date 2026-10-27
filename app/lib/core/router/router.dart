@@ -287,8 +287,19 @@ class _ShellAdaptativo extends ConsumerWidget {
                               const SizedBox(height: 10),
                               Tooltip(
                                 message:
-                                    '${perfil.nombre} (${perfil.esJefe ? "Jefe" : "Empleado"})',
-                                child: Avatar(perfil.nombre, radio: 16),
+                                    '${perfil.nombre} (${perfil.esJefe ? "Jefe" : "Empleado"})\nClic para cerrar sesión',
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(16),
+                                  onTap: () async {
+                                    await ref
+                                        .read(sesionControllerProvider)
+                                        .cerrarSesion();
+                                    if (context.mounted) {
+                                      context.go(Rutas.login);
+                                    }
+                                  },
+                                  child: Avatar(perfil.nombre, radio: 16),
+                                ),
                               ),
                             ],
                           ],
@@ -334,106 +345,141 @@ class _ShellAdaptativo extends ConsumerWidget {
                     context: context,
                     isScrollControlled: true,
                     showDragHandle: true,
-                    builder: (ctx) => SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: tema.colorScheme.primaryContainer,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Icon(
-                                    Icons.grid_view_rounded,
-                                    size: 20,
-                                    color: tema.colorScheme.onPrimaryContainer,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    'Más módulos',
-                                    style: tema.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
+                    builder: (ctx) {
+                      final cs = Theme.of(ctx).colorScheme;
+                      return SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: tema.colorScheme.primaryContainer,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Icon(
+                                      Icons.grid_view_rounded,
+                                      size: 20,
+                                      color:
+                                          tema.colorScheme.onPrimaryContainer,
                                     ),
                                   ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.close),
-                                  onPressed: () => Navigator.of(ctx).pop(),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            const Divider(),
-                            const SizedBox(height: 8),
-                            Flexible(
-                              child: ListView.separated(
-                                shrinkWrap: true,
-                                itemCount: visibles.length,
-                                separatorBuilder: (_, _) =>
-                                    const SizedBox(height: 6),
-                                itemBuilder: (context, idx) {
-                                  final d = visibles[idx];
-                                  final esSeleccionado =
-                                      ubicacion == d.ruta ||
-                                      (d.ruta != Rutas.inicio &&
-                                          ubicacion.startsWith(d.ruta));
-                                  final cs = Theme.of(context).colorScheme;
-                                  return Material(
-                                    color: esSeleccionado
-                                        ? cs.primaryContainer.withValues(
-                                            alpha: 0.5,
-                                          )
-                                        : cs.surfaceContainerLowest,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      side: BorderSide(
-                                        color: esSeleccionado
-                                            ? cs.primary
-                                            : cs.outlineVariant.withValues(
-                                                alpha: 0.65,
-                                              ),
-                                      ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      'Más módulos',
+                                      style: tema.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                     ),
-                                    child: ListTile(
-                                      leading: _iconoDestino(d, noLeidas),
-                                      title: Text(
-                                        d.etiqueta,
-                                        style: TextStyle(
-                                          fontWeight: esSeleccionado
-                                              ? FontWeight.bold
-                                              : FontWeight.normal,
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.close),
+                                    onPressed: () => Navigator.of(ctx).pop(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              const Divider(),
+                              const SizedBox(height: 8),
+                              Flexible(
+                                child: ListView.separated(
+                                  shrinkWrap: true,
+                                  itemCount: visibles.length,
+                                  separatorBuilder: (_, _) =>
+                                      const SizedBox(height: 6),
+                                  itemBuilder: (context, idx) {
+                                    final d = visibles[idx];
+                                    final esSeleccionado =
+                                        ubicacion == d.ruta ||
+                                        (d.ruta != Rutas.inicio &&
+                                            ubicacion.startsWith(d.ruta));
+                                    final cs = Theme.of(context).colorScheme;
+                                    return Material(
+                                      color: esSeleccionado
+                                          ? cs.primaryContainer.withValues(
+                                              alpha: 0.5,
+                                            )
+                                          : cs.surfaceContainerLowest,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        side: BorderSide(
+                                          color: esSeleccionado
+                                              ? cs.primary
+                                              : cs.outlineVariant.withValues(
+                                                  alpha: 0.65,
+                                                ),
                                         ),
                                       ),
-                                      trailing:
-                                          d.ruta == Rutas.alertas &&
-                                              noLeidas > 0
-                                          ? Badge.count(count: noLeidas)
-                                          : const Icon(
-                                              Icons.chevron_right,
-                                              size: 20,
-                                            ),
-                                      selected: esSeleccionado,
-                                      onTap: () {
-                                        Navigator.of(ctx).pop();
-                                        context.go(d.ruta);
-                                      },
-                                    ),
-                                  );
-                                },
+                                      child: ListTile(
+                                        leading: _iconoDestino(d, noLeidas),
+                                        title: Text(
+                                          d.etiqueta,
+                                          style: TextStyle(
+                                            fontWeight: esSeleccionado
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                          ),
+                                        ),
+                                        trailing:
+                                            d.ruta == Rutas.alertas &&
+                                                noLeidas > 0
+                                            ? Badge.count(count: noLeidas)
+                                            : const Icon(
+                                                Icons.chevron_right,
+                                                size: 20,
+                                              ),
+                                        selected: esSeleccionado,
+                                        onTap: () {
+                                          Navigator.of(ctx).pop();
+                                          context.go(d.ruta);
+                                        },
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 8),
+                              Card(
+                                elevation: 0,
+                                color: cs.errorContainer.withValues(alpha: 0.2),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: BorderSide(
+                                    color: cs.error.withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: ListTile(
+                                  leading: Icon(Icons.logout, color: cs.error),
+                                  title: Text(
+                                    'Cerrar sesión',
+                                    style: TextStyle(
+                                      color: cs.error,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  onTap: () async {
+                                    Navigator.of(ctx).pop();
+                                    await ref
+                                        .read(sesionControllerProvider)
+                                        .cerrarSesion();
+                                    if (context.mounted) {
+                                      context.go(Rutas.login);
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   );
                   return;
                 }
@@ -463,8 +509,22 @@ class _ShellAdaptativo extends ConsumerWidget {
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
+  final almacen = ref.watch(almacenLocalProvider);
   return GoRouter(
     initialLocation: Rutas.inicio,
+    refreshListenable: almacen,
+    redirect: (context, state) {
+      final estaEnLogin = state.uri.path == Rutas.login;
+      final estaAutenticado = almacen.usuarioActualId != null;
+
+      if (!estaAutenticado && !estaEnLogin) {
+        return Rutas.login;
+      }
+      if (estaAutenticado && estaEnLogin) {
+        return Rutas.inicio;
+      }
+      return null;
+    },
     routes: [
       GoRoute(
         path: Rutas.login,

@@ -98,7 +98,7 @@ class _ComprasRepositorioLocal implements ComprasRepositorio {
         ? null
         : datos.notas?.trim();
 
-    _almacen.compras[id] = Compra(
+    final compra = Compra(
       id: id,
       proveedorId: datos.proveedorId,
       fecha: datos.fecha,
@@ -108,6 +108,7 @@ class _ComprasRepositorioLocal implements ComprasRepositorio {
     );
 
     final listaItems = <CompraItem>[];
+    final movsStock = <MovimientoStock>[];
     for (final i in datos.items) {
       final itemId = _almacen.generarId();
       listaItems.add(
@@ -121,42 +122,40 @@ class _ComprasRepositorioLocal implements ComprasRepositorio {
       );
 
       final movStockId = _almacen.generarId();
-      _almacen.movimientosStock[movStockId] = MovimientoStock(
-        id: movStockId,
-        insumoId: i.insumoId,
-        fecha: datos.fecha,
-        cantidad: i.cantidad,
-        tipo: TipoMovimientoStock.compra,
-        compraId: id,
-        creadoPor: uid,
-        creadoPorNombre: _almacen.nombreDePerfil(uid),
+      movsStock.add(
+        MovimientoStock(
+          id: movStockId,
+          insumoId: i.insumoId,
+          fecha: datos.fecha,
+          cantidad: i.cantidad,
+          tipo: TipoMovimientoStock.compra,
+          compraId: id,
+          creadoPor: uid,
+          creadoPorNombre: _almacen.nombreDePerfil(uid),
+        ),
       );
     }
-    _almacen.compraItems[id] = listaItems;
 
     final total = datos.total;
-    if (total.esPositivo) {
-      final movCajaId = _almacen.generarId();
-      final provNombre = datos.proveedorId == null
-          ? null
-          : _almacen.proveedores[datos.proveedorId!]?.nombre;
-      _almacen.movimientosCaja[movCajaId] = MovimientoCaja(
-        id: movCajaId,
-        fecha: datos.fecha,
-        tipo: TipoMovimientoCaja.egreso,
-        monto: total,
-        medioPago: datos.medioPago,
-        concepto: ConceptoCaja.compra,
-        descripcion: provNombre != null
-            ? 'Compra a $provNombre'
-            : 'Compra de insumos',
-        compraId: id,
-        creadoPor: uid,
-        creadoPorNombre: _almacen.nombreDePerfil(uid),
-      );
-    }
+    final provNombre = datos.proveedorId == null
+        ? null
+        : _almacen.proveedores[datos.proveedorId!]?.nombre;
+    final movCaja = MovimientoCaja(
+      id: _almacen.generarId(),
+      fecha: datos.fecha,
+      tipo: TipoMovimientoCaja.egreso,
+      monto: total,
+      medioPago: datos.medioPago,
+      concepto: ConceptoCaja.compra,
+      descripcion: provNombre != null
+          ? 'Compra a $provNombre'
+          : 'Compra de insumos',
+      compraId: id,
+      creadoPor: uid,
+      creadoPorNombre: _almacen.nombreDePerfil(uid),
+    );
 
-    _almacen.notificar();
+    await _almacen.persistirCompra(compra, listaItems, movsStock, movCaja);
     return id;
   }
 
@@ -174,7 +173,7 @@ class _ComprasRepositorioLocal implements ComprasRepositorio {
     }
 
     final uid = _almacen.usuarioActualId;
-    _almacen.compras[id] = Compra(
+    final compraAnulada = Compra(
       id: c.id,
       proveedorId: c.proveedorId,
       fecha: c.fecha,
@@ -186,6 +185,7 @@ class _ComprasRepositorioLocal implements ComprasRepositorio {
       creadoPor: c.creadoPor,
     );
 
+    final contraMovsStock = <MovimientoStock>[];
     final movsStock = _almacen.movimientosStock.values
         .where(
           (m) => m.compraId == id && m.tipo != TipoMovimientoStock.anulacion,
@@ -193,42 +193,53 @@ class _ComprasRepositorioLocal implements ComprasRepositorio {
         .toList();
     for (final orig in movsStock) {
       final anulId = _almacen.generarId();
-      _almacen.movimientosStock[anulId] = MovimientoStock(
-        id: anulId,
-        insumoId: orig.insumoId,
-        fecha: DateTime.now(),
-        cantidad: -orig.cantidad,
-        tipo: TipoMovimientoStock.anulacion,
-        compraId: id,
-        anulaId: orig.id,
-        nota: 'Anulación compra: ${motivo.trim()}',
-        creadoPor: uid,
-        creadoPorNombre: _almacen.nombreDePerfil(uid),
-      );
-      _almacen.evaluarAlertaStockBajo(orig.insumoId);
-    }
-
-    final movsCaja = _almacen.movimientosCaja.values
-        .where((m) => m.compraId == id && m.concepto != ConceptoCaja.anulacion)
-        .toList();
-    for (final orig in movsCaja) {
-      final anulId = _almacen.generarId();
-      _almacen.movimientosCaja[anulId] = MovimientoCaja(
-        id: anulId,
-        fecha: DateTime.now(),
-        tipo: TipoMovimientoCaja.ingreso,
-        monto: orig.monto,
-        medioPago: orig.medioPago,
-        concepto: ConceptoCaja.anulacion,
-        descripcion: 'Anulación compra (${motivo.trim()})',
-        compraId: id,
-        anulaId: orig.id,
-        creadoPor: uid,
-        creadoPorNombre: _almacen.nombreDePerfil(uid),
+      contraMovsStock.add(
+        MovimientoStock(
+          id: anulId,
+          insumoId: orig.insumoId,
+          fecha: DateTime.now(),
+          cantidad: -orig.cantidad,
+          tipo: TipoMovimientoStock.anulacion,
+          compraId: id,
+          anulaId: orig.id,
+          nota: 'Anulación compra: ${motivo.trim()}',
+          creadoPor: uid,
+          creadoPorNombre: _almacen.nombreDePerfil(uid),
+        ),
       );
     }
 
-    _almacen.notificar();
+    final origCaja = _almacen.movimientosCaja.values.firstWhere(
+      (m) => m.compraId == id && m.concepto != ConceptoCaja.anulacion,
+      orElse: () => MovimientoCaja(
+        id: _almacen.generarId(),
+        fecha: DateTime.now(),
+        tipo: TipoMovimientoCaja.egreso,
+        monto: Dinero.cero,
+        medioPago: c.medioPago,
+        concepto: ConceptoCaja.compra,
+      ),
+    );
+
+    final contraCaja = MovimientoCaja(
+      id: _almacen.generarId(),
+      fecha: DateTime.now(),
+      tipo: TipoMovimientoCaja.ingreso,
+      monto: origCaja.monto,
+      medioPago: origCaja.medioPago,
+      concepto: ConceptoCaja.anulacion,
+      descripcion: 'Anulación compra (${motivo.trim()})',
+      compraId: id,
+      anulaId: origCaja.id,
+      creadoPor: uid,
+      creadoPorNombre: _almacen.nombreDePerfil(uid),
+    );
+
+    await _almacen.persistirAnulacionCompra(
+      compraAnulada,
+      contraMovsStock,
+      contraCaja,
+    );
   }
 }
 

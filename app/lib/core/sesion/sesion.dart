@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jereposteria/compartido/tipos/enums.dart';
 import 'package:jereposteria/compartido/tipos/errores.dart';
+import 'package:jereposteria/core/config/entorno.dart';
 import 'package:jereposteria/core/notificaciones/notificaciones_push.dart';
+import 'package:jereposteria/core/sync/supabase_connector.dart';
 import 'package:jereposteria/data/local/almacen_local.dart';
 import 'package:jereposteria/data/modelos/alertas_equipo_modelos.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -110,6 +112,16 @@ class SesionController {
           );
           _almacen.conectadoAInternet = true;
           _almacen.usuarioActualId = user.id;
+          if (_almacen.db != null) {
+            unawaited(
+              _almacen.db!.connect(
+                connector: SupabasePowerSyncConnector(
+                  supabase: client,
+                  powersyncUrl: EntornoApp.powerSyncUrl,
+                ),
+              ),
+            );
+          }
           unawaited(ServicioNotificacionesPush.registrarTokenEnSupabase());
           ServicioNotificacionesPush.suscribirAlertasTiempoReal();
           return;
@@ -134,6 +146,9 @@ class SesionController {
       try {
         await client.auth.signOut();
       } catch (_) {}
+    }
+    if (_almacen.db != null) {
+      unawaited(_almacen.db!.disconnect());
     }
     _almacen.usuarioActualId = null;
   }

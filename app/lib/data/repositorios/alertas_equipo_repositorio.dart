@@ -63,7 +63,7 @@ class _AlertasRepositorioLocal implements AlertasRepositorio {
   Future<void> marcarLeida(String id) async {
     final a = _almacen.alertas[id];
     if (a == null || a.leida) return;
-    _almacen.alertas[id] = Alerta(
+    final alerta = Alerta(
       id: a.id,
       tipo: a.tipo,
       titulo: a.titulo,
@@ -73,7 +73,7 @@ class _AlertasRepositorioLocal implements AlertasRepositorio {
       leidaEn: DateTime.now(),
       creadoEn: a.creadoEn,
     );
-    _almacen.notificar();
+    await _almacen.persistirAlerta(alerta);
   }
 
   @override
@@ -82,7 +82,7 @@ class _AlertasRepositorioLocal implements AlertasRepositorio {
     for (final e in _almacen.alertas.entries.toList()) {
       final a = e.value;
       if (!a.leida) {
-        _almacen.alertas[e.key] = Alerta(
+        final alerta = Alerta(
           id: a.id,
           tipo: a.tipo,
           titulo: a.titulo,
@@ -92,9 +92,9 @@ class _AlertasRepositorioLocal implements AlertasRepositorio {
           leidaEn: ahora,
           creadoEn: a.creadoEn,
         );
+        await _almacen.persistirAlerta(alerta);
       }
     }
-    _almacen.notificar();
   }
 }
 
@@ -150,8 +150,7 @@ class _EquipoRepositorioLocal implements EquipoRepositorio {
       _almacen.permisos[perfilId] ?? {},
     );
     mapa[modulo] = nivel;
-    _almacen.permisos[perfilId] = mapa;
-    _almacen.notificar();
+    await _almacen.persistirPermisos(perfilId, mapa);
   }
 
   @override
@@ -286,9 +285,8 @@ class _ConfiguracionRepositorioLocal implements ConfiguracionRepositorio {
     if (c.habitualMinPedidos < 1 || c.habitualMeses < 1) {
       throw const ErrorDeNegocio('Los valores deben ser mayores a cero.');
     }
-    _almacen.configuracion = c.copyWith(nombreNegocio: c.nombreNegocio.trim());
-    _almacen.recalcularTodosLosHabituales();
-    _almacen.notificar();
+    final nueva = c.copyWith(nombreNegocio: c.nombreNegocio.trim());
+    await _almacen.persistirConfiguracion(nueva);
   }
 
   @override

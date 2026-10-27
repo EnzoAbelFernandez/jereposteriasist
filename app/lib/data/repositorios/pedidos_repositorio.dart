@@ -209,7 +209,7 @@ class _PedidosRepositorioLocal implements PedidosRepositorio {
 
     final id = _almacen.generarId();
     final numero = _secuenciaLocal++;
-    _almacen.pedidos[id] = Pedido(
+    final pedido = Pedido(
       id: id,
       numero: numero,
       clienteId: datos.clienteId,
@@ -239,11 +239,11 @@ class _PedidosRepositorioLocal implements PedidosRepositorio {
         ),
       );
     }
-    _almacen.pedidoItems[id] = listaItems;
 
+    MovimientoCaja? senaMov;
     if (sena != null) {
       final movId = _almacen.generarId();
-      _almacen.movimientosCaja[movId] = MovimientoCaja(
+      senaMov = MovimientoCaja(
         id: movId,
         fecha: sena.fecha ?? DateTime.now(),
         tipo: TipoMovimientoCaja.ingreso,
@@ -257,7 +257,7 @@ class _PedidosRepositorioLocal implements PedidosRepositorio {
       );
     }
 
-    _almacen.notificar();
+    await _almacen.persistirPedido(pedido, listaItems, sena: senaMov);
     return id;
   }
 
@@ -274,7 +274,7 @@ class _PedidosRepositorioLocal implements PedidosRepositorio {
     }
     _validarDatos(datos, esNuevo: false);
 
-    _almacen.pedidos[id] = Pedido(
+    final actualizado = Pedido(
       id: id,
       numero: actual.numero,
       clienteId: datos.clienteId,
@@ -307,12 +307,10 @@ class _PedidosRepositorioLocal implements PedidosRepositorio {
         ),
       );
     }
-    _almacen.pedidoItems[id] = listaItems;
-    _almacen.recalcularHabitual(datos.clienteId);
+    await _almacen.persistirPedido(actualizado, listaItems);
     if (actual.clienteId != datos.clienteId) {
       _almacen.recalcularHabitual(actual.clienteId);
     }
-    _almacen.notificar();
   }
 
   @override
@@ -335,7 +333,7 @@ class _PedidosRepositorioLocal implements PedidosRepositorio {
       throw const ErrorDeNegocio('Indicá el motivo de la cancelación.');
     }
 
-    _almacen.pedidos[id] = Pedido(
+    final actualizado = Pedido(
       id: actual.id,
       numero: actual.numero,
       clienteId: actual.clienteId,
@@ -357,8 +355,8 @@ class _PedidosRepositorioLocal implements PedidosRepositorio {
           : actual.motivoCancelacion,
       creadoEn: actual.creadoEn,
     );
-    _almacen.recalcularHabitual(actual.clienteId);
-    _almacen.notificar();
+    final items = _almacen.pedidoItems[id] ?? [];
+    await _almacen.persistirPedido(actualizado, items);
   }
 
   @override
@@ -387,7 +385,7 @@ class _PedidosRepositorioLocal implements PedidosRepositorio {
     }
 
     final movId = _almacen.generarId();
-    _almacen.movimientosCaja[movId] = MovimientoCaja(
+    final mov = MovimientoCaja(
       id: movId,
       fecha: pago.fecha ?? DateTime.now(),
       tipo: TipoMovimientoCaja.ingreso,
@@ -399,7 +397,7 @@ class _PedidosRepositorioLocal implements PedidosRepositorio {
       creadoPor: _almacen.usuarioActualId,
       creadoPorNombre: _almacen.nombreDePerfil(_almacen.usuarioActualId),
     );
-    _almacen.notificar();
+    await _almacen.persistirMovimientoCaja(mov);
   }
 
   @override
@@ -415,7 +413,7 @@ class _PedidosRepositorioLocal implements PedidosRepositorio {
       throw const ErrorDeNegocio('Este pago ya fue anulado.');
     }
     final id = _almacen.generarId();
-    _almacen.movimientosCaja[id] = MovimientoCaja(
+    final contra = MovimientoCaja(
       id: id,
       fecha: DateTime.now(),
       tipo: orig.tipo == TipoMovimientoCaja.ingreso
@@ -430,7 +428,7 @@ class _PedidosRepositorioLocal implements PedidosRepositorio {
       creadoPor: _almacen.usuarioActualId,
       creadoPorNombre: _almacen.nombreDePerfil(_almacen.usuarioActualId),
     );
-    _almacen.notificar();
+    await _almacen.persistirMovimientoCaja(contra);
   }
 }
 

@@ -47,14 +47,14 @@ class _ProveedoresRepositorioLocal implements ProveedoresRepositorio {
       throw const ErrorDeNegocio('El nombre del proveedor es obligatorio.');
     }
     final id = _almacen.generarId();
-    _almacen.proveedores[id] = Proveedor(
+    final proveedor = Proveedor(
       id: id,
       nombre: datos.nombre.trim(),
       telefono: _limpiar(datos.telefono),
       email: _limpiar(datos.email),
       notas: _limpiar(datos.notas),
     );
-    _almacen.notificar();
+    await _almacen.persistirProveedor(proveedor);
     return id;
   }
 
@@ -67,7 +67,7 @@ class _ProveedoresRepositorioLocal implements ProveedoresRepositorio {
     if (actual == null) {
       throw const ErrorDeNegocio('El proveedor no existe.');
     }
-    _almacen.proveedores[id] = Proveedor(
+    final actualizado = Proveedor(
       id: id,
       nombre: datos.nombre.trim(),
       telefono: _limpiar(datos.telefono),
@@ -75,14 +75,14 @@ class _ProveedoresRepositorioLocal implements ProveedoresRepositorio {
       notas: _limpiar(datos.notas),
       archivadoEn: actual.archivadoEn,
     );
-    _almacen.notificar();
+    await _almacen.persistirProveedor(actualizado);
   }
 
   @override
   Future<void> archivar(String id) async {
     final p = _almacen.proveedores[id];
     if (p == null) return;
-    _almacen.proveedores[id] = Proveedor(
+    final archivado = Proveedor(
       id: p.id,
       nombre: p.nombre,
       telefono: p.telefono,
@@ -90,7 +90,7 @@ class _ProveedoresRepositorioLocal implements ProveedoresRepositorio {
       notas: p.notas,
       archivadoEn: DateTime.now(),
     );
-    _almacen.notificar();
+    await _almacen.persistirProveedor(archivado);
   }
 }
 

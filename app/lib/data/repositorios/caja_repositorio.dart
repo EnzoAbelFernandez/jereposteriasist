@@ -112,7 +112,7 @@ class _CajaRepositorioLocal implements CajaRepositorio {
     }
     final id = _almacen.generarId();
     final uid = _almacen.usuarioActualId;
-    _almacen.movimientosCaja[id] = MovimientoCaja(
+    final mov = MovimientoCaja(
       id: id,
       fecha: fecha ?? DateTime.now(),
       tipo: tipo,
@@ -125,7 +125,7 @@ class _CajaRepositorioLocal implements CajaRepositorio {
       creadoPor: uid,
       creadoPorNombre: _almacen.nombreDePerfil(uid),
     );
-    _almacen.notificar();
+    await _almacen.persistirMovimientoCaja(mov);
     return id;
   }
 
@@ -148,7 +148,7 @@ class _CajaRepositorioLocal implements CajaRepositorio {
     }
     final anulId = _almacen.generarId();
     final uid = _almacen.usuarioActualId;
-    _almacen.movimientosCaja[anulId] = MovimientoCaja(
+    final contra = MovimientoCaja(
       id: anulId,
       fecha: DateTime.now(),
       tipo: orig.tipo == TipoMovimientoCaja.ingreso
@@ -162,7 +162,7 @@ class _CajaRepositorioLocal implements CajaRepositorio {
       creadoPor: uid,
       creadoPorNombre: _almacen.nombreDePerfil(uid),
     );
-    _almacen.notificar();
+    await _almacen.persistirMovimientoCaja(contra);
   }
 
   String _escaparCsv(String valor) {

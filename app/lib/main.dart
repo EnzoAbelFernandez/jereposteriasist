@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jereposteria/core/config/entorno.dart';
 import 'package:jereposteria/core/notificaciones/notificaciones_push.dart';
 import 'package:jereposteria/core/router/router.dart';
+import 'package:jereposteria/core/sync/powersync_database.dart';
 import 'package:jereposteria/core/tema/tema.dart';
+import 'package:jereposteria/data/data.dart';
+import 'package:powersync/powersync.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
@@ -18,7 +23,40 @@ Future<void> main() async {
     // Permite seguir operando en modo local/offline si no hay red al iniciar.
   }
   await ServicioNotificacionesPush.inicializar();
-  runApp(const ProviderScope(child: JeReposteriaApp()));
+
+  PowerSyncDatabase? powerSyncDb;
+  try {
+    powerSyncDb = await inicializarPowerSync();
+  } catch (e) {
+    debugPrint('Error inicializando PowerSync: $e');
+  }
+
+  final almacen = AlmacenLocal(db: powerSyncDb);
+  if (powerSyncDb != null) {
+    await almacen.vincularPowerSync(powerSyncDb);
+  }
+
+  // Vincular sesión actual si existe en almacenamiento local
+  try {
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session != null) {
+      almacen.usuarioActualId = session.user.id;
+    } else {
+      almacen.usuarioActualId = null;
+    }
+  } catch (_) {
+    almacen.usuarioActualId = null;
+  }
+
+  runApp(
+    ProviderScope(
+      overrides: [
+        almacenLocalProvider.overrideWithValue(almacen),
+        powerSyncDatabaseProvider.overrideWithValue(powerSyncDb),
+      ],
+      child: const JeReposteriaApp(),
+    ),
+  );
 }
 
 class JeReposteriaApp extends ConsumerWidget {

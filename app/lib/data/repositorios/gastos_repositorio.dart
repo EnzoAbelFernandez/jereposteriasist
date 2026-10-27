@@ -82,7 +82,7 @@ class _GastosRepositorioLocal implements GastosRepositorio {
 
     final id = _almacen.generarId();
     final uid = _almacen.usuarioActualId;
-    _almacen.gastos[id] = Gasto(
+    final gasto = Gasto(
       id: id,
       fecha: soloFecha(datos.fecha),
       categoriaId: datos.categoriaId,
@@ -92,9 +92,8 @@ class _GastosRepositorioLocal implements GastosRepositorio {
       notas: datos.notas?.trim().isEmpty == true ? null : datos.notas?.trim(),
     );
 
-    final movCajaId = _almacen.generarId();
-    _almacen.movimientosCaja[movCajaId] = MovimientoCaja(
-      id: movCajaId,
+    final movCaja = MovimientoCaja(
+      id: _almacen.generarId(),
       fecha: datos.fecha,
       tipo: TipoMovimientoCaja.egreso,
       monto: datos.monto,
@@ -106,7 +105,7 @@ class _GastosRepositorioLocal implements GastosRepositorio {
       creadoPorNombre: _almacen.nombreDePerfil(uid),
     );
 
-    _almacen.notificar();
+    await _almacen.persistirGasto(gasto, movCaja);
     return id;
   }
 
@@ -124,7 +123,7 @@ class _GastosRepositorioLocal implements GastosRepositorio {
     }
 
     final uid = _almacen.usuarioActualId;
-    _almacen.gastos[id] = Gasto(
+    final gastoAnulado = Gasto(
       id: g.id,
       fecha: g.fecha,
       categoriaId: g.categoriaId,
@@ -137,27 +136,33 @@ class _GastosRepositorioLocal implements GastosRepositorio {
       notas: g.notas,
     );
 
-    final movsCaja = _almacen.movimientosCaja.values
-        .where((m) => m.gastoId == id && m.concepto != ConceptoCaja.anulacion)
-        .toList();
-    for (final orig in movsCaja) {
-      final anulId = _almacen.generarId();
-      _almacen.movimientosCaja[anulId] = MovimientoCaja(
-        id: anulId,
+    final origCaja = _almacen.movimientosCaja.values.firstWhere(
+      (m) => m.gastoId == id && m.concepto != ConceptoCaja.anulacion,
+      orElse: () => MovimientoCaja(
+        id: _almacen.generarId(),
         fecha: DateTime.now(),
-        tipo: TipoMovimientoCaja.ingreso,
-        monto: orig.monto,
-        medioPago: orig.medioPago,
-        concepto: ConceptoCaja.anulacion,
-        descripcion: 'Anulación gasto: ${g.descripcion}',
-        gastoId: id,
-        anulaId: orig.id,
-        creadoPor: uid,
-        creadoPorNombre: _almacen.nombreDePerfil(uid),
-      );
-    }
+        tipo: TipoMovimientoCaja.egreso,
+        monto: g.monto,
+        medioPago: g.medioPago,
+        concepto: ConceptoCaja.gasto,
+      ),
+    );
 
-    _almacen.notificar();
+    final contraCaja = MovimientoCaja(
+      id: _almacen.generarId(),
+      fecha: DateTime.now(),
+      tipo: TipoMovimientoCaja.ingreso,
+      monto: origCaja.monto,
+      medioPago: origCaja.medioPago,
+      concepto: ConceptoCaja.anulacion,
+      descripcion: 'Anulación gasto: ${g.descripcion}',
+      gastoId: id,
+      anulaId: origCaja.id,
+      creadoPor: uid,
+      creadoPorNombre: _almacen.nombreDePerfil(uid),
+    );
+
+    await _almacen.persistirAnulacionGasto(gastoAnulado, contraCaja);
   }
 
   @override
@@ -183,11 +188,8 @@ class _GastosRepositorioLocal implements GastosRepositorio {
       throw const ErrorDeNegocio('El nombre de la categoría es obligatorio.');
     }
     final id = _almacen.generarId();
-    _almacen.categoriasGasto[id] = CategoriaGasto(
-      id: id,
-      nombre: nombre.trim(),
-    );
-    _almacen.notificar();
+    final cat = CategoriaGasto(id: id, nombre: nombre.trim());
+    await _almacen.persistirCategoriaGasto(cat);
     return id;
   }
 
@@ -198,24 +200,24 @@ class _GastosRepositorioLocal implements GastosRepositorio {
     }
     final actual = _almacen.categoriasGasto[id];
     if (actual == null) return;
-    _almacen.categoriasGasto[id] = CategoriaGasto(
+    final cat = CategoriaGasto(
       id: id,
       nombre: nombre.trim(),
       archivadoEn: actual.archivadoEn,
     );
-    _almacen.notificar();
+    await _almacen.persistirCategoriaGasto(cat);
   }
 
   @override
   Future<void> archivarCategoria(String id) async {
     final actual = _almacen.categoriasGasto[id];
     if (actual == null) return;
-    _almacen.categoriasGasto[id] = CategoriaGasto(
+    final cat = CategoriaGasto(
       id: id,
       nombre: actual.nombre,
       archivadoEn: DateTime.now(),
     );
-    _almacen.notificar();
+    await _almacen.persistirCategoriaGasto(cat);
   }
 
   @override

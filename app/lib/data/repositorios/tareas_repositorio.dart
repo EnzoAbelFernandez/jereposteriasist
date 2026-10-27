@@ -99,7 +99,7 @@ class _TareasRepositorioLocal implements TareasRepositorio {
       );
     }
     final id = _almacen.generarId();
-    _almacen.tareas[id] = Tarea(
+    final tarea = Tarea(
       id: id,
       titulo: datos.titulo.trim(),
       descripcion: datos.descripcion?.trim().isEmpty == true
@@ -113,7 +113,7 @@ class _TareasRepositorioLocal implements TareasRepositorio {
       creadoPor: uid,
       creadoEn: DateTime.now(),
     );
-    _almacen.notificar();
+    await _almacen.persistirTarea(tarea);
     return id;
   }
 
@@ -131,7 +131,7 @@ class _TareasRepositorioLocal implements TareasRepositorio {
     if (!esJefe && actual.creadoPor != uid) {
       throw const ErrorDeNegocio('Solo podés cambiar el estado de esta tarea.');
     }
-    _almacen.tareas[id] = Tarea(
+    final tarea = Tarea(
       id: id,
       titulo: datos.titulo.trim(),
       descripcion: datos.descripcion?.trim().isEmpty == true
@@ -147,14 +147,14 @@ class _TareasRepositorioLocal implements TareasRepositorio {
       creadoPor: actual.creadoPor,
       creadoEn: actual.creadoEn,
     );
-    _almacen.notificar();
+    await _almacen.persistirTarea(tarea);
   }
 
   @override
   Future<void> cambiarEstado(String id, EstadoTarea estado) async {
     final actual = _almacen.tareas[id];
     if (actual == null) return;
-    _almacen.tareas[id] = Tarea(
+    final tarea = Tarea(
       id: actual.id,
       titulo: actual.titulo,
       descripcion: actual.descripcion,
@@ -168,7 +168,7 @@ class _TareasRepositorioLocal implements TareasRepositorio {
       creadoPor: actual.creadoPor,
       creadoEn: actual.creadoEn,
     );
-    _almacen.notificar();
+    await _almacen.persistirTarea(tarea);
   }
 }
 

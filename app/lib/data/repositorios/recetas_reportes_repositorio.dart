@@ -202,7 +202,7 @@ class _RecetasRepositorioLocal implements RecetasRepositorio {
   Future<String> crear(RecetaDatos datos) async {
     _validar(datos);
     final id = _almacen.generarId();
-    _almacen.recetas[id] = Receta(
+    final receta = Receta(
       id: id,
       nombre: datos.nombre.trim(),
       productoId: datos.productoId,
@@ -210,7 +210,7 @@ class _RecetasRepositorioLocal implements RecetasRepositorio {
       rindeDescripcion: _limpiar(datos.rindeDescripcion),
       notas: _limpiar(datos.notas),
     );
-    _almacen.recetaItems[id] = [
+    final items = [
       for (final it in datos.items)
         RecetaItem(
           id: _almacen.generarId(),
@@ -219,7 +219,7 @@ class _RecetasRepositorioLocal implements RecetasRepositorio {
           cantidad: it.cantidad,
         ),
     ];
-    _almacen.notificar();
+    await _almacen.persistirReceta(receta, items);
     return id;
   }
 
@@ -230,7 +230,7 @@ class _RecetasRepositorioLocal implements RecetasRepositorio {
       throw const ErrorDeNegocio('La receta no existe.');
     }
     _validar(datos);
-    _almacen.recetas[id] = Receta(
+    final receta = Receta(
       id: id,
       nombre: datos.nombre.trim(),
       productoId: datos.productoId,
@@ -239,7 +239,7 @@ class _RecetasRepositorioLocal implements RecetasRepositorio {
       notas: _limpiar(datos.notas),
       archivadoEn: actual.archivadoEn,
     );
-    _almacen.recetaItems[id] = [
+    final items = [
       for (final it in datos.items)
         RecetaItem(
           id: _almacen.generarId(),
@@ -248,14 +248,14 @@ class _RecetasRepositorioLocal implements RecetasRepositorio {
           cantidad: it.cantidad,
         ),
     ];
-    _almacen.notificar();
+    await _almacen.persistirReceta(receta, items);
   }
 
   @override
   Future<void> archivar(String id) async {
     final actual = _almacen.recetas[id];
     if (actual == null) return;
-    _almacen.recetas[id] = Receta(
+    final archivada = Receta(
       id: actual.id,
       nombre: actual.nombre,
       productoId: actual.productoId,
@@ -264,7 +264,8 @@ class _RecetasRepositorioLocal implements RecetasRepositorio {
       notas: actual.notas,
       archivadoEn: DateTime.now(),
     );
-    _almacen.notificar();
+    final items = _almacen.recetaItems[id] ?? [];
+    await _almacen.persistirReceta(archivada, items);
   }
 }
 

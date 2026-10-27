@@ -96,7 +96,7 @@ class _ClientesRepositorioLocal implements ClientesRepositorio {
   Future<String> crear(ClienteDatos datos) async {
     _validar(datos);
     final id = _almacen.generarId();
-    _almacen.clientes[id] = Cliente(
+    final cliente = Cliente(
       id: id,
       nombre: datos.nombre.trim(),
       telefono: _limpiar(datos.telefono),
@@ -111,7 +111,7 @@ class _ClientesRepositorioLocal implements ClientesRepositorio {
       habitualModo: datos.habitualModo,
       creadoEn: DateTime.now(),
     );
-    _almacen.notificar();
+    await _almacen.persistirCliente(cliente);
     return id;
   }
 
@@ -122,7 +122,7 @@ class _ClientesRepositorioLocal implements ClientesRepositorio {
     if (actual == null) {
       throw const ErrorDeNegocio('El cliente no existe.');
     }
-    _almacen.clientes[id] = Cliente(
+    final actualizado = Cliente(
       id: id,
       nombre: datos.nombre.trim(),
       telefono: _limpiar(datos.telefono),
@@ -139,14 +139,14 @@ class _ClientesRepositorioLocal implements ClientesRepositorio {
       archivadoEn: actual.archivadoEn,
       creadoEn: actual.creadoEn,
     );
-    _almacen.notificar();
+    await _almacen.persistirCliente(actualizado);
   }
 
   @override
   Future<void> archivar(String id) async {
     final c = _almacen.clientes[id];
     if (c == null) return;
-    _almacen.clientes[id] = Cliente(
+    final archivado = Cliente(
       id: c.id,
       nombre: c.nombre,
       telefono: c.telefono,
@@ -163,14 +163,14 @@ class _ClientesRepositorioLocal implements ClientesRepositorio {
       archivadoEn: DateTime.now(),
       creadoEn: c.creadoEn,
     );
-    _almacen.notificar();
+    await _almacen.persistirCliente(archivado);
   }
 
   @override
   Future<void> desarchivar(String id) async {
     final c = _almacen.clientes[id];
     if (c == null) return;
-    _almacen.clientes[id] = Cliente(
+    final desarchivado = Cliente(
       id: c.id,
       nombre: c.nombre,
       telefono: c.telefono,
@@ -186,7 +186,7 @@ class _ClientesRepositorioLocal implements ClientesRepositorio {
       habitualAuto: c.habitualAuto,
       creadoEn: c.creadoEn,
     );
-    _almacen.notificar();
+    await _almacen.persistirCliente(desarchivado);
   }
 }
 

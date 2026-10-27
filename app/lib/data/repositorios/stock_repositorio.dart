@@ -117,7 +117,7 @@ class _InsumosRepositorioLocal implements InsumosRepositorio {
       throw const ErrorDeNegocio('Las cantidades no pueden ser negativas.');
     }
     final id = _almacen.generarId();
-    _almacen.insumos[id] = Insumo(
+    final insumo = Insumo(
       id: id,
       nombre: datos.nombre.trim(),
       unidad: datos.unidad,
@@ -125,9 +125,10 @@ class _InsumosRepositorioLocal implements InsumosRepositorio {
       categoria: _limpiar(datos.categoria),
       notas: _limpiar(datos.notas),
     );
+    MovimientoStock? movInicial;
     if (stockInicial > 0) {
       final movId = _almacen.generarId();
-      _almacen.movimientosStock[movId] = MovimientoStock(
+      movInicial = MovimientoStock(
         id: movId,
         insumoId: id,
         fecha: DateTime.now(),
@@ -136,9 +137,8 @@ class _InsumosRepositorioLocal implements InsumosRepositorio {
         creadoPor: _almacen.usuarioActualId,
         creadoPorNombre: _almacen.nombreDePerfil(_almacen.usuarioActualId),
       );
-      _almacen.evaluarAlertaStockBajo(id);
     }
-    _almacen.notificar();
+    await _almacen.persistirInsumo(insumo, movimientoInicial: movInicial);
     return id;
   }
 
@@ -161,7 +161,7 @@ class _InsumosRepositorioLocal implements InsumosRepositorio {
         );
       }
     }
-    _almacen.insumos[id] = Insumo(
+    final actualizado = Insumo(
       id: id,
       nombre: datos.nombre.trim(),
       unidad: datos.unidad,
@@ -170,14 +170,14 @@ class _InsumosRepositorioLocal implements InsumosRepositorio {
       notas: _limpiar(datos.notas),
       archivadoEn: actual.archivadoEn,
     );
-    _almacen.notificar();
+    await _almacen.persistirInsumo(actualizado);
   }
 
   @override
   Future<void> archivar(String id) async {
     final i = _almacen.insumos[id];
     if (i == null) return;
-    _almacen.insumos[id] = Insumo(
+    final archivado = Insumo(
       id: i.id,
       nombre: i.nombre,
       unidad: i.unidad,
@@ -186,7 +186,7 @@ class _InsumosRepositorioLocal implements InsumosRepositorio {
       notas: i.notas,
       archivadoEn: DateTime.now(),
     );
-    _almacen.notificar();
+    await _almacen.persistirInsumo(archivado);
   }
 }
 
@@ -240,7 +240,7 @@ class _StockRepositorioLocal implements StockRepositorio {
     final diff = cantidadContada - actual;
     if (diff == 0) return 0;
     final id = _almacen.generarId();
-    _almacen.movimientosStock[id] = MovimientoStock(
+    final mov = MovimientoStock(
       id: id,
       insumoId: insumoId,
       fecha: DateTime.now(),
@@ -250,8 +250,7 @@ class _StockRepositorioLocal implements StockRepositorio {
       creadoPor: _almacen.usuarioActualId,
       creadoPorNombre: _almacen.nombreDePerfil(_almacen.usuarioActualId),
     );
-    _almacen.evaluarAlertaStockBajo(insumoId);
-    _almacen.notificar();
+    await _almacen.persistirMovimientoStock(mov);
     return diff;
   }
 
@@ -265,7 +264,7 @@ class _StockRepositorioLocal implements StockRepositorio {
       throw const ErrorDeNegocio('La cantidad de merma debe ser mayor a cero.');
     }
     final id = _almacen.generarId();
-    _almacen.movimientosStock[id] = MovimientoStock(
+    final mov = MovimientoStock(
       id: id,
       insumoId: insumoId,
       fecha: DateTime.now(),
@@ -275,8 +274,7 @@ class _StockRepositorioLocal implements StockRepositorio {
       creadoPor: _almacen.usuarioActualId,
       creadoPorNombre: _almacen.nombreDePerfil(_almacen.usuarioActualId),
     );
-    _almacen.evaluarAlertaStockBajo(insumoId);
-    _almacen.notificar();
+    await _almacen.persistirMovimientoStock(mov);
   }
 
   @override
@@ -299,7 +297,7 @@ class _StockRepositorioLocal implements StockRepositorio {
       );
     }
     final id = _almacen.generarId();
-    _almacen.movimientosStock[id] = MovimientoStock(
+    final contra = MovimientoStock(
       id: id,
       insumoId: orig.insumoId,
       fecha: DateTime.now(),
@@ -310,8 +308,7 @@ class _StockRepositorioLocal implements StockRepositorio {
       creadoPor: _almacen.usuarioActualId,
       creadoPorNombre: _almacen.nombreDePerfil(_almacen.usuarioActualId),
     );
-    _almacen.evaluarAlertaStockBajo(orig.insumoId);
-    _almacen.notificar();
+    await _almacen.persistirMovimientoStock(contra);
   }
 }
 

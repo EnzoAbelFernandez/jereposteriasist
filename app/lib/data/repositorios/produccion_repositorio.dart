@@ -126,7 +126,7 @@ class _ProduccionRepositorioLocal implements ProduccionRepositorio {
 
     final id = _almacen.generarId();
     final uid = _almacen.usuarioActualId;
-    _almacen.producciones[id] = Produccion(
+    final produccion = Produccion(
       id: id,
       fecha: datos.fecha,
       productoId: datos.productoId,
@@ -137,22 +137,24 @@ class _ProduccionRepositorioLocal implements ProduccionRepositorio {
       notas: datos.notas?.trim().isEmpty == true ? null : datos.notas?.trim(),
     );
 
+    final movs = <MovimientoStock>[];
     for (final c in datos.consumos) {
       final movId = _almacen.generarId();
-      _almacen.movimientosStock[movId] = MovimientoStock(
-        id: movId,
-        insumoId: c.insumoId,
-        fecha: datos.fecha,
-        cantidad: -c.cantidad,
-        tipo: TipoMovimientoStock.produccion,
-        produccionId: id,
-        creadoPor: uid,
-        creadoPorNombre: _almacen.nombreDePerfil(uid),
+      movs.add(
+        MovimientoStock(
+          id: movId,
+          insumoId: c.insumoId,
+          fecha: datos.fecha,
+          cantidad: -c.cantidad,
+          tipo: TipoMovimientoStock.produccion,
+          produccionId: id,
+          creadoPor: uid,
+          creadoPorNombre: _almacen.nombreDePerfil(uid),
+        ),
       );
-      _almacen.evaluarAlertaStockBajo(c.insumoId);
     }
 
-    _almacen.notificar();
+    await _almacen.persistirProduccion(produccion, movs);
     return id;
   }
 
@@ -170,7 +172,7 @@ class _ProduccionRepositorioLocal implements ProduccionRepositorio {
     }
 
     final uid = _almacen.usuarioActualId;
-    _almacen.producciones[id] = Produccion(
+    final prodAnulada = Produccion(
       id: p.id,
       fecha: p.fecha,
       productoId: p.productoId,
@@ -184,6 +186,7 @@ class _ProduccionRepositorioLocal implements ProduccionRepositorio {
       notas: p.notas,
     );
 
+    final contraMovs = <MovimientoStock>[];
     final movs = _almacen.movimientosStock.values
         .where(
           (m) =>
@@ -192,21 +195,23 @@ class _ProduccionRepositorioLocal implements ProduccionRepositorio {
         .toList();
     for (final orig in movs) {
       final anulId = _almacen.generarId();
-      _almacen.movimientosStock[anulId] = MovimientoStock(
-        id: anulId,
-        insumoId: orig.insumoId,
-        fecha: DateTime.now(),
-        cantidad: -orig.cantidad,
-        tipo: TipoMovimientoStock.anulacion,
-        produccionId: id,
-        anulaId: orig.id,
-        nota: 'Anulación producción: ${motivo.trim()}',
-        creadoPor: uid,
-        creadoPorNombre: _almacen.nombreDePerfil(uid),
+      contraMovs.add(
+        MovimientoStock(
+          id: anulId,
+          insumoId: orig.insumoId,
+          fecha: DateTime.now(),
+          cantidad: -orig.cantidad,
+          tipo: TipoMovimientoStock.anulacion,
+          produccionId: id,
+          anulaId: orig.id,
+          nota: 'Anulación producción: ${motivo.trim()}',
+          creadoPor: uid,
+          creadoPorNombre: _almacen.nombreDePerfil(uid),
+        ),
       );
     }
 
-    _almacen.notificar();
+    await _almacen.persistirAnulacionProduccion(prodAnulada, contraMovs);
   }
 }
 

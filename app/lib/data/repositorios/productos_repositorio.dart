@@ -58,14 +58,14 @@ class _ProductosRepositorioLocal implements ProductosRepositorio {
       throw const ErrorDeNegocio('El precio no puede ser negativo.');
     }
     final id = _almacen.generarId();
-    _almacen.productos[id] = Producto(
+    final producto = Producto(
       id: id,
       nombre: datos.nombre.trim(),
       categoria: datos.categoria,
       precioBase: datos.precioBase,
       descripcion: _limpiar(datos.descripcion),
     );
-    _almacen.notificar();
+    await _almacen.persistirProducto(producto);
     return id;
   }
 
@@ -78,7 +78,7 @@ class _ProductosRepositorioLocal implements ProductosRepositorio {
     if (actual == null) {
       throw const ErrorDeNegocio('El producto no existe.');
     }
-    _almacen.productos[id] = Producto(
+    final actualizado = Producto(
       id: id,
       nombre: datos.nombre.trim(),
       categoria: datos.categoria,
@@ -86,14 +86,14 @@ class _ProductosRepositorioLocal implements ProductosRepositorio {
       descripcion: _limpiar(datos.descripcion),
       archivadoEn: actual.archivadoEn,
     );
-    _almacen.notificar();
+    await _almacen.persistirProducto(actualizado);
   }
 
   @override
   Future<void> archivar(String id) async {
     final p = _almacen.productos[id];
     if (p == null) return;
-    _almacen.productos[id] = Producto(
+    final archivado = Producto(
       id: p.id,
       nombre: p.nombre,
       categoria: p.categoria,
@@ -101,7 +101,7 @@ class _ProductosRepositorioLocal implements ProductosRepositorio {
       descripcion: p.descripcion,
       archivadoEn: DateTime.now(),
     );
-    _almacen.notificar();
+    await _almacen.persistirProducto(archivado);
   }
 }
 
