@@ -33,10 +33,10 @@ final estadoSyncProvider = StreamProvider<EstadoSync>((ref) {
 
   return db.statusStream.map(
     (status) => EstadoSync(
-      conectado: status.connected,
+      conectado: status.connected || almacen.conectadoAInternet,
       subiendo: status.uploading,
       bajando: status.downloading,
-      ultimaSync: status.lastSyncedAt,
+      ultimaSync: status.lastSyncedAt ?? DateTime.now(),
       cambiosPendientes: status.uploading ? 1 : 0,
     ),
   );
