@@ -1,11 +1,11 @@
 {
-    "name": "jereposteria",
-    "short_name": "jereposteria",
+    "name": "JeRepostería",
+    "short_name": "JeRepostería",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FAF6F2",
+    "theme_color": "#8B4513",
+    "description": "Gestión de pedidos, recetas, stock y caja para repostería",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
