@@ -84,7 +84,8 @@ class StockMovimientosPantalla extends ConsumerWidget {
             encabezado: Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: TarjetaSeccion(
-                titulo: 'Stock actual',
+                titulo: 'Nivel de stock',
+                icono: Icons.inventory_2_outlined,
                 accion: insumoConStock.faltante
                     ? InsigniaEstado(
                         texto:
@@ -92,18 +93,41 @@ class StockMovimientosPantalla extends ConsumerWidget {
                         color: ColorEstado.peligro,
                         icono: Icons.warning_amber_rounded,
                       )
-                    : null,
+                    : const InsigniaEstado(
+                        texto: 'Stock suficiente',
+                        color: ColorEstado.exito,
+                        icono: Icons.check_circle_outline,
+                      ),
                 children: [
-                  Text(
-                    insumoConStock.stockTexto,
-                    style: tema.textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        insumoConStock.stockTexto,
+                        style: tema.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: insumoConStock.faltante
+                              ? resolverColorEstado(
+                                  context,
+                                  ColorEstado.peligro,
+                                ).frente
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'actual',
+                        style: tema.textTheme.bodyMedium?.copyWith(
+                          color: tema.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
                   Separacion.chica,
                   Text(
                     insumoConStock.insumo.stockMinimo > 0
-                        ? 'Stock mínimo: ${insumoConStock.insumo.unidad.formatear(insumoConStock.insumo.stockMinimo)}'
+                        ? 'Stock mínimo configurado: ${insumoConStock.insumo.unidad.formatear(insumoConStock.insumo.stockMinimo)}'
                         : 'Sin stock mínimo configurado',
                     style: tema.textTheme.bodyMedium?.copyWith(
                       color: tema.colorScheme.onSurfaceVariant,
@@ -122,8 +146,27 @@ class StockMovimientosPantalla extends ConsumerWidget {
                 conSigno: true,
               );
 
+              ColorEstado colorSemantico;
+              IconData iconoMovimiento;
+              if (m.anulado) {
+                colorSemantico = ColorEstado.neutro;
+                iconoMovimiento = Icons.block_outlined;
+              } else if (m.esEntrada) {
+                colorSemantico = ColorEstado.exito;
+                iconoMovimiento = Icons.arrow_downward;
+              } else if (m.tipo == TipoMovimientoStock.merma) {
+                colorSemantico = ColorEstado.peligro;
+                iconoMovimiento = Icons.remove_circle_outline;
+              } else {
+                colorSemantico = ColorEstado.advertencia;
+                iconoMovimiento = Icons.arrow_upward;
+              }
+              final paleta = resolverColorEstado(context, colorSemantico);
+
               final partesSubtitulo = <String>[
                 formatearFechaHora(m.fecha),
+                if (m.compraId != null) 'Origen: compra',
+                if (m.produccionId != null) 'Origen: producción',
                 if (m.nota != null && m.nota!.trim().isNotEmpty) m.nota!.trim(),
                 if (m.creadoPorNombre != null &&
                     m.creadoPorNombre!.trim().isNotEmpty)
@@ -141,34 +184,75 @@ class StockMovimientosPantalla extends ConsumerWidget {
 
               Widget? trailing;
               if (m.anulable) {
-                trailing = RequierePermiso(
-                  modulo: Modulo.stock,
-                  nivel: NivelPermiso.editar,
-                  child: IconButton(
-                    icon: const Icon(Icons.undo),
-                    tooltip: 'Anular movimiento',
-                    onPressed: () =>
-                        _confirmarYAnular(context, ref, m, insumoConStock),
-                  ),
+                trailing = Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      cantidadTexto,
+                      style: tema.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: m.anulado
+                            ? tema.colorScheme.outline
+                            : paleta.frente,
+                        decoration: m.anulado
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    RequierePermiso(
+                      modulo: Modulo.stock,
+                      nivel: NivelPermiso.editar,
+                      child: IconButton(
+                        icon: const Icon(Icons.undo),
+                        tooltip: 'Anular movimiento',
+                        onPressed: () =>
+                            _confirmarYAnular(context, ref, m, insumoConStock),
+                      ),
+                    ),
+                  ],
                 );
-              } else if (onTap != null) {
-                trailing = const Icon(Icons.chevron_right);
+              } else {
+                trailing = Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      cantidadTexto,
+                      style: tema.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: m.anulado
+                            ? tema.colorScheme.outline
+                            : paleta.frente,
+                        decoration: m.anulado
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
+                    ),
+                    if (onTap != null) ...[
+                      const SizedBox(width: 4),
+                      const Icon(Icons.chevron_right, size: 20),
+                    ],
+                  ],
+                );
               }
 
               return ListTile(
-                leading: Icon(
-                  m.esEntrada ? Icons.arrow_downward : Icons.arrow_upward,
+                leading: CircleAvatar(
+                  backgroundColor: paleta.fondo,
+                  foregroundColor: paleta.frente,
+                  child: Icon(iconoMovimiento, size: 18),
                 ),
                 title: Row(
                   children: [
                     Flexible(
                       child: Text(
-                        '${m.tipo.etiqueta} ($cantidadTexto)',
+                        m.tipo.etiqueta,
                         style: m.anulado
-                            ? const TextStyle(
+                            ? TextStyle(
                                 decoration: TextDecoration.lineThrough,
+                                color: tema.colorScheme.outline,
                               )
-                            : null,
+                            : const TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
                     if (m.anulado) ...[

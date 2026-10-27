@@ -73,6 +73,7 @@ class _CategoriasGastoPantallaState
 
   @override
   Widget build(BuildContext context) {
+    final tema = Theme.of(context);
     final asyncCategorias = ref.watch(
       categoriasGastoProvider(_incluirArchivadas),
     );
@@ -102,46 +103,151 @@ class _CategoriasGastoPantallaState
           label: const Text('Nueva categoría'),
         ),
       ),
-      cuerpo: ListaAsync<CategoriaGasto>(
-        valor: asyncCategorias,
-        vacio: const EstadoVacio(
-          icono: Icons.category_outlined,
-          mensaje: 'No hay categorías',
-        ),
-        itemBuilder: (context, c) {
-          Widget? trailing;
-          if (puedeEditar) {
-            if (c.archivada) {
-              trailing = TextButton.icon(
-                icon: const Icon(Icons.restore),
-                label: const Text('Restaurar'),
-                onPressed: () => _desarchivar(c),
-              );
-            } else {
-              trailing = Row(
-                mainAxisSize: MainAxisSize.min,
+      cuerpo: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: tema.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.35,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: tema.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                ),
+              ),
+              child: Row(
                 children: [
-                  IconButton(
-                    tooltip: 'Editar',
-                    icon: const Icon(Icons.edit_outlined),
-                    onPressed: () => _renombrar(c),
+                  Icon(
+                    Icons.label_outline,
+                    size: 20,
+                    color: tema.colorScheme.primary,
                   ),
-                  IconButton(
-                    tooltip: 'Archivar',
-                    icon: const Icon(Icons.archive_outlined),
-                    onPressed: () => _archivar(c),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Las categorías organizan tus egresos para los reportes mensuales de distribución de costos.',
+                      style: tema.textTheme.bodySmall?.copyWith(
+                        color: tema.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                   ),
                 ],
-              );
-            }
-          }
-
-          return ListTile(
-            title: Text(c.nombre),
-            subtitle: c.archivada ? const Text('Archivada') : null,
-            trailing: trailing,
-          );
-        },
+              ),
+            ),
+          ),
+          Separacion.chica,
+          Expanded(
+            child: ListaAsync<CategoriaGasto>(
+              valor: asyncCategorias,
+              separadores: false,
+              vacio: const EstadoVacio(
+                icono: Icons.category_outlined,
+                mensaje: 'No hay categorías registradas',
+              ),
+              itemBuilder: (context, c) {
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: tema.colorScheme.outlineVariant.withValues(
+                        alpha: 0.5,
+                      ),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: c.archivada
+                                ? tema.colorScheme.surfaceContainerHighest
+                                : tema.colorScheme.primaryContainer.withValues(
+                                    alpha: 0.5,
+                                  ),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            c.archivada
+                                ? Icons.archive_outlined
+                                : Icons.category_outlined,
+                            size: 18,
+                            color: c.archivada
+                                ? tema.colorScheme.onSurfaceVariant
+                                : tema.colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                c.nombre,
+                                style: tema.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  decoration: c.archivada
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                  color: c.archivada
+                                      ? tema.colorScheme.outline
+                                      : null,
+                                ),
+                              ),
+                              if (c.archivada) ...[
+                                const SizedBox(height: 2),
+                                const InsigniaEstado(
+                                  texto: 'Archivada',
+                                  color: ColorEstado.neutro,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        if (puedeEditar)
+                          if (c.archivada)
+                            TextButton.icon(
+                              icon: const Icon(Icons.restore, size: 18),
+                              label: const Text('Restaurar'),
+                              onPressed: () => _desarchivar(c),
+                            )
+                          else
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  tooltip: 'Renombrar categoría',
+                                  icon: const Icon(Icons.edit_outlined),
+                                  onPressed: () => _renombrar(c),
+                                ),
+                                IconButton(
+                                  tooltip: 'Archivar categoría',
+                                  icon: const Icon(Icons.archive_outlined),
+                                  onPressed: () => _archivar(c),
+                                ),
+                              ],
+                            ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

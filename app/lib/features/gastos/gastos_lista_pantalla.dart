@@ -49,6 +49,7 @@ class _GastosListaPantallaState extends ConsumerState<GastosListaPantalla> {
 
   @override
   Widget build(BuildContext context) {
+    final tema = Theme.of(context);
     final filtro = FiltroGastos(
       desde: inicioDeMes(_mes),
       hasta: finDeMes(_mes),
@@ -92,32 +93,58 @@ class _GastosListaPantallaState extends ConsumerState<GastosListaPantalla> {
       cuerpo: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      tooltip: 'Mes anterior',
-                      icon: const Icon(Icons.chevron_left),
-                      onPressed: _mesAnterior,
+                Container(
+                  decoration: BoxDecoration(
+                    color: tema.colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.35,
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        formatearMesAnio(_mes),
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: tema.colorScheme.outlineVariant.withValues(
+                        alpha: 0.4,
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Mes siguiente',
-                      icon: const Icon(Icons.chevron_right),
-                      onPressed: _mesSiguiente,
-                    ),
-                  ],
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        tooltip: 'Mes anterior',
+                        icon: const Icon(Icons.chevron_left),
+                        onPressed: _mesAnterior,
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.calendar_month_outlined,
+                            size: 18,
+                            color: tema.colorScheme.primary,
+                          ),
+                          Separacion.chica,
+                          Text(
+                            formatearMesAnio(_mes),
+                            style: tema.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        tooltip: 'Mes siguiente',
+                        icon: const Icon(Icons.chevron_right),
+                        onPressed: _mesSiguiente,
+                      ),
+                    ],
+                  ),
                 ),
                 Separacion.chica,
                 SelectorCategoriaGasto(
@@ -132,51 +159,182 @@ class _GastosListaPantallaState extends ConsumerState<GastosListaPantalla> {
                     data: (total) => total.formatear(),
                     orElse: () => '...',
                   ),
+                  color: ColorEstado.peligro,
                   icono: Icons.payments_outlined,
                 ),
               ],
             ),
           ),
+          Separacion.chica,
           Expanded(
             child: ListaAsync<GastoResumen>(
               valor: asyncGastos,
+              separadores: false,
               vacio: const EstadoVacio(
                 icono: Icons.receipt_outlined,
                 mensaje: 'No hay gastos en este período',
               ),
               itemBuilder: (context, r) {
-                final subtitulo =
-                    '${formatearFecha(r.gasto.fecha)} · ${r.categoriaNombre} · ${r.gasto.medioPago.etiqueta}';
-                return ListTile(
-                  title: Text(r.gasto.descripcion),
-                  subtitle: Text(subtitulo),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextoDinero(r.gasto.monto),
-                      if (r.gasto.anulado) ...[
-                        Separacion.chica,
-                        const InsigniaEstado(
-                          texto: 'Anulado',
-                          color: ColorEstado.peligro,
-                        ),
-                      ] else
-                        RequierePermiso(
-                          modulo: Modulo.gastos,
-                          nivel: NivelPermiso.editar,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Separacion.chica,
-                              IconButton(
-                                tooltip: 'Anular',
-                                icon: const Icon(Icons.block_outlined),
-                                onPressed: () => _anularGasto(r.gasto),
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: tema.colorScheme.outlineVariant.withValues(
+                        alpha: 0.5,
+                      ),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
                               ),
-                            ],
+                              decoration: BoxDecoration(
+                                color: tema.colorScheme.primaryContainer
+                                    .withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.category_outlined,
+                                    size: 13,
+                                    color: tema.colorScheme.primary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    r.categoriaNombre,
+                                    style: tema.textTheme.labelSmall?.copyWith(
+                                      color: tema.colorScheme.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Separacion.chica,
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.calendar_today_outlined,
+                                  size: 13,
+                                  color: tema.colorScheme.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  formatearFecha(r.gasto.fecha),
+                                  style: tema.textTheme.bodySmall?.copyWith(
+                                    color: tema.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Spacer(),
+                            if (r.gasto.anulado)
+                              const InsigniaEstado(
+                                texto: 'Anulado',
+                                color: ColorEstado.peligro,
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          r.gasto.descripcion,
+                          style: tema.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            decoration: r.gasto.anulado
+                                ? TextDecoration.lineThrough
+                                : null,
                           ),
                         ),
-                    ],
+                        if (r.gasto.notas != null &&
+                            r.gasto.notas!.trim().isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            r.gasto.notas!.trim(),
+                            style: tema.textTheme.bodySmall?.copyWith(
+                              color: tema.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: tema.colorScheme.surfaceContainerHighest
+                                    .withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    r.gasto.medioPago.icono,
+                                    size: 15,
+                                    color: tema.colorScheme.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    r.gasto.medioPago.etiqueta,
+                                    style: tema.textTheme.bodySmall?.copyWith(
+                                      color: tema.colorScheme.onSurfaceVariant,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Spacer(),
+                            TextoDinero(
+                              r.gasto.monto,
+                              estilo: tema.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: r.gasto.anulado
+                                    ? tema.colorScheme.outline
+                                    : null,
+                              ),
+                            ),
+                            if (!r.gasto.anulado)
+                              RequierePermiso(
+                                modulo: Modulo.gastos,
+                                nivel: NivelPermiso.editar,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(left: 6),
+                                  child: IconButton(
+                                    tooltip: 'Anular gasto',
+                                    visualDensity: VisualDensity.compact,
+                                    icon: Icon(
+                                      Icons.block_outlined,
+                                      size: 18,
+                                      color: tema.colorScheme.onSurfaceVariant,
+                                    ),
+                                    onPressed: () => _anularGasto(r.gasto),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },

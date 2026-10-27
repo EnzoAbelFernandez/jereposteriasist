@@ -77,36 +77,44 @@ class _CompraFormularioPantallaState
 
   Widget _construirRenglon(int index) {
     final item = _renglones[index];
+    final tema = Theme.of(context);
     return Card(
       key: ObjectKey(item),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: tema.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: SelectorInsumo(
-                    insumoId: item.insumo?.id,
-                    obligatorio: true,
-                    excluir: {
-                      for (var j = 0; j < _renglones.length; j++)
-                        if (j != index && _renglones[j].insumo != null)
-                          _renglones[j].insumo!.id,
-                    },
-                    onChanged: (nuevoInsumo) {
-                      setState(() {
-                        if (item.insumo?.id != nuevoInsumo?.id) {
-                          item.insumo = nuevoInsumo;
-                          item.cantidad = null;
-                        }
-                      });
-                    },
+                CircleAvatar(
+                  radius: 12,
+                  backgroundColor: tema.colorScheme.primaryContainer,
+                  foregroundColor: tema.colorScheme.onPrimaryContainer,
+                  child: Text(
+                    '${index + 1}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
+                const SizedBox(width: 8),
+                Text(
+                  'Insumo ${index + 1}',
+                  style: tema.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
                 if (_renglones.length > 1)
                   IconButton(
                     tooltip: 'Quitar insumo',
@@ -118,6 +126,24 @@ class _CompraFormularioPantallaState
                     },
                   ),
               ],
+            ),
+            const SizedBox(height: 8),
+            SelectorInsumo(
+              insumoId: item.insumo?.id,
+              obligatorio: true,
+              excluir: {
+                for (var j = 0; j < _renglones.length; j++)
+                  if (j != index && _renglones[j].insumo != null)
+                    _renglones[j].insumo!.id,
+              },
+              onChanged: (nuevoInsumo) {
+                setState(() {
+                  if (item.insumo?.id != nuevoInsumo?.id) {
+                    item.insumo = nuevoInsumo;
+                    item.cantidad = null;
+                  }
+                });
+              },
             ),
             if (item.insumo != null) ...[
               Separacion.chica,

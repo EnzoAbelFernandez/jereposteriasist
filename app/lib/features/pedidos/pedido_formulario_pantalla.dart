@@ -207,7 +207,7 @@ class _PedidoFormularioPantallaState
     }
 
     if (mounted) {
-      mostrarExito(context, 'Pedido guardado');
+      mostrarExito(context, 'Pedido guardado con éxito.');
       context.pop();
     }
   }
@@ -221,7 +221,9 @@ class _PedidoFormularioPantallaState
       color: tema.colorScheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: tema.colorScheme.outlineVariant),
+        side: BorderSide(
+          color: tema.colorScheme.outlineVariant.withValues(alpha: 0.7),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -229,7 +231,6 @@ class _PedidoFormularioPantallaState
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'Ítem ${index + 1}',
@@ -237,12 +238,42 @@ class _PedidoFormularioPantallaState
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                if (_items.length > 1)
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: tema.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Subtotal: ',
+                        style: tema.textTheme.bodySmall?.copyWith(
+                          color: tema.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      TextoDinero(
+                        item.subtotal,
+                        estilo: tema.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_items.length > 1) ...[
+                  const SizedBox(width: 4),
                   IconButton(
                     icon: const Icon(Icons.delete_outline),
                     tooltip: 'Eliminar ítem',
                     onPressed: () => _eliminarItem(index),
                   ),
+                ],
               ],
             ),
             Separacion.chica,
@@ -289,25 +320,9 @@ class _PedidoFormularioPantallaState
             Separacion.chica,
             CampoTexto(
               key: ValueKey('notas_${item.key}'),
-              etiqueta: 'Notas del ítem (opcional)',
+              etiqueta: 'Notas del ítem (rellenos, dedicatoria...)',
               valorInicial: item.notas,
               onChanged: (v) => item.notas = v,
-            ),
-            Separacion.chica,
-            Align(
-              alignment: Alignment.centerRight,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Subtotal ítem: ', style: tema.textTheme.bodySmall),
-                  TextoDinero(
-                    item.subtotal,
-                    estilo: tema.textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
             ),
           ],
         ),
@@ -320,49 +335,65 @@ class _PedidoFormularioPantallaState
     return FormularioResponsivo(
       formKey: _formKey,
       campos: [
-        SelectorCliente(
-          clienteId: _clienteId,
-          obligatorio: true,
-          permitirCrear: true,
-          onChanged: (c) => setState(() => _clienteId = c?.id),
-        ),
-        CampoFecha(
-          etiqueta: 'Fecha y hora de entrega',
-          valor: _fechaEntrega,
-          conHora: true,
-          obligatorio: true,
-          onChanged: (f) => setState(() => _fechaEntrega = f),
-        ),
-        SelectorOpcion<TipoEntrega>(
-          etiqueta: 'Entrega',
-          opciones: TipoEntrega.values,
-          valor: _tipoEntrega,
-          etiquetaDe: (t) => t.etiqueta,
-          onChanged: (t) {
-            if (t != null) setState(() => _tipoEntrega = t);
-          },
-        ),
-        if (_tipoEntrega == TipoEntrega.envio)
-          CampoTexto(
-            key: const ValueKey('direccion_entrega'),
-            etiqueta: 'Dirección de entrega',
-            valorInicial: _direccionEntrega,
-            obligatorio: true,
-            icono: Icons.place_outlined,
-            onChanged: (v) => _direccionEntrega = v,
-          ),
-        if (!widget.esEdicion)
-          SelectorOpcion<EstadoPedido>(
-            etiqueta: 'Estado inicial',
-            opciones: const [EstadoPedido.confirmado, EstadoPedido.presupuesto],
-            valor: _estadoInicial,
-            etiquetaDe: (e) => e.etiqueta,
-            onChanged: (e) {
-              if (e != null) setState(() => _estadoInicial = e);
-            },
-          ),
         TarjetaSeccion(
-          titulo: 'Detalle del pedido',
+          titulo: 'Cliente y entrega',
+          icono: Icons.person_outline,
+          children: [
+            SelectorCliente(
+              clienteId: _clienteId,
+              obligatorio: true,
+              permitirCrear: true,
+              onChanged: (c) => setState(() => _clienteId = c?.id),
+            ),
+            Separacion.media,
+            CampoFecha(
+              etiqueta: 'Fecha y hora de entrega',
+              valor: _fechaEntrega,
+              conHora: true,
+              obligatorio: true,
+              onChanged: (f) => setState(() => _fechaEntrega = f),
+            ),
+            Separacion.media,
+            SelectorOpcion<TipoEntrega>(
+              etiqueta: 'Tipo de entrega',
+              opciones: TipoEntrega.values,
+              valor: _tipoEntrega,
+              etiquetaDe: (t) => t.etiqueta,
+              onChanged: (t) {
+                if (t != null) setState(() => _tipoEntrega = t);
+              },
+            ),
+            if (_tipoEntrega == TipoEntrega.envio) ...[
+              Separacion.media,
+              CampoTexto(
+                key: const ValueKey('direccion_entrega'),
+                etiqueta: 'Dirección de entrega',
+                valorInicial: _direccionEntrega,
+                obligatorio: true,
+                icono: Icons.place_outlined,
+                onChanged: (v) => _direccionEntrega = v,
+              ),
+            ],
+            if (!widget.esEdicion) ...[
+              Separacion.media,
+              SelectorOpcion<EstadoPedido>(
+                etiqueta: 'Estado inicial',
+                opciones: const [
+                  EstadoPedido.confirmado,
+                  EstadoPedido.presupuesto,
+                ],
+                valor: _estadoInicial,
+                etiquetaDe: (e) => e.etiqueta,
+                onChanged: (e) {
+                  if (e != null) setState(() => _estadoInicial = e);
+                },
+              ),
+            ],
+          ],
+        ),
+        TarjetaSeccion(
+          titulo: 'Ítems del pedido (${_items.length})',
+          icono: Icons.cake_outlined,
           children: [
             for (var i = 0; i < _items.length; i++) ...[
               if (i > 0) Separacion.media,
@@ -372,135 +403,169 @@ class _PedidoFormularioPantallaState
             OutlinedButton.icon(
               onPressed: _agregarItem,
               icon: const Icon(Icons.add),
-              label: const Text('Agregar ítem'),
+              label: const Text('Agregar otro ítem'),
             ),
           ],
         ),
-        CampoDinero(
-          key: const ValueKey('descuento'),
-          etiqueta: 'Descuento (opcional)',
-          valorInicial: _descuento,
-          permitirCero: true,
-          onChanged: (d) => setState(() => _descuento = d ?? Dinero.cero),
-        ),
-        if (_descuento.esPositivo)
-          CampoTexto(
-            key: const ValueKey('motivo_descuento'),
-            etiqueta: 'Motivo del descuento',
-            valorInicial: _motivoDescuento,
-            onChanged: (v) => _motivoDescuento = v,
-          ),
-        Card(
-          elevation: 0,
-          color: tema.colorScheme.surfaceContainerHigh,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [const Text('Subtotal'), TextoDinero(_subtotal)],
-                ),
-                if (_descuento.esPositivo) ...[
-                  Separacion.chica,
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Descuento'),
-                      TextoDinero(_descuento),
-                    ],
-                  ),
-                ],
-                const Divider(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        TarjetaSeccion(
+          titulo: 'Descuento y totales',
+          icono: Icons.receipt_long_outlined,
+          children: [
+            CampoDinero(
+              key: const ValueKey('descuento'),
+              etiqueta: 'Descuento (opcional)',
+              valorInicial: _descuento,
+              permitirCero: true,
+              onChanged: (d) => setState(() => _descuento = d ?? Dinero.cero),
+            ),
+            if (_descuento.esPositivo) ...[
+              Separacion.media,
+              CampoTexto(
+                key: const ValueKey('motivo_descuento'),
+                etiqueta: 'Motivo del descuento',
+                valorInicial: _motivoDescuento,
+                onChanged: (v) => _motivoDescuento = v,
+              ),
+            ],
+            Separacion.media,
+            Card(
+              elevation: 0,
+              color: tema.colorScheme.surfaceContainerHigh,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Total',
-                      style: tema.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Subtotal',
+                          style: tema.textTheme.bodyMedium?.copyWith(
+                            color: tema.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        TextoDinero(_subtotal),
+                      ],
                     ),
-                    TextoDinero(
-                      _total,
-                      estilo: tema.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (!widget.esEdicion)
-          Card(
-            elevation: 0,
-            color: tema.colorScheme.surfaceContainerLow,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: tema.colorScheme.outlineVariant),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SwitchListTile(
-                    title: const Text('Registrar seña ahora'),
-                    value: _cobraSena,
-                    onChanged: (v) => setState(() => _cobraSena = v),
-                  ),
-                  if (_cobraSena) ...[
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                    if (_descuento.esPositivo) ...[
+                      Separacion.chica,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          CampoDinero(
-                            key: const ValueKey('monto_sena'),
-                            etiqueta: 'Monto de la seña',
-                            valorInicial: _montoSena,
-                            obligatorio: true,
-                            onChanged: (m) => setState(() => _montoSena = m),
-                          ),
-                          Separacion.media,
                           Text(
-                            'Medio de pago',
-                            style: tema.textTheme.bodySmall,
-                          ),
-                          Separacion.chica,
-                          SelectorMedioPago(
-                            valor: _medioPagoSena,
-                            onChanged: (mp) =>
-                                setState(() => _medioPagoSena = mp),
-                          ),
-                          Separacion.media,
-                          Text(
-                            'Saldo pendiente: ${(_total - (_montoSena ?? Dinero.cero)).formatear()}',
+                            'Descuento',
                             style: tema.textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
+                              color: tema.colorScheme.error,
                             ),
                           ),
+                          TextoDinero(-_descuento, colorear: true),
                         ],
                       ),
+                    ],
+                    const Divider(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Total',
+                          style: tema.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        TextoDinero(
+                          _total,
+                          estilo: tema.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
-                ],
+                ),
               ),
             ),
+          ],
+        ),
+        if (!widget.esEdicion)
+          TarjetaSeccion(
+            titulo: 'Seña inicial (opcional)',
+            icono: Icons.payments_outlined,
+            children: [
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('¿Cobrar seña inicial ahora?'),
+                subtitle: const Text(
+                  'Registra el cobro en caja y lo descuenta del saldo',
+                ),
+                value: _cobraSena,
+                onChanged: (v) => setState(() => _cobraSena = v),
+              ),
+              if (_cobraSena) ...[
+                Separacion.media,
+                CampoDinero(
+                  key: const ValueKey('monto_sena'),
+                  etiqueta: 'Monto de la seña',
+                  valorInicial: _montoSena,
+                  obligatorio: true,
+                  onChanged: (m) => setState(() => _montoSena = m),
+                ),
+                Separacion.media,
+                Text(
+                  'Medio de pago',
+                  style: tema.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Separacion.chica,
+                SelectorMedioPago(
+                  valor: _medioPagoSena,
+                  onChanged: (mp) => setState(() => _medioPagoSena = mp),
+                ),
+                Separacion.media,
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: tema.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Saldo que restará cobrar:',
+                        style: tema.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        (_total - (_montoSena ?? Dinero.cero)).formatear(),
+                        style: tema.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: tema.colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
           ),
-        CampoTexto(
-          key: const ValueKey('notas_generales'),
-          etiqueta: 'Notas generales (opcional)',
-          valorInicial: _notas,
-          maxLineas: 3,
+        TarjetaSeccion(
+          titulo: 'Notas generales',
           icono: Icons.notes_outlined,
-          onChanged: (v) => _notas = v,
+          children: [
+            CampoTexto(
+              key: const ValueKey('notas_generales'),
+              etiqueta: 'Aclaraciones, temática o detalles especiales',
+              valorInicial: _notas,
+              maxLineas: 3,
+              onChanged: (v) => _notas = v,
+            ),
+          ],
         ),
       ],
       botonGuardar: BotonGuardar(

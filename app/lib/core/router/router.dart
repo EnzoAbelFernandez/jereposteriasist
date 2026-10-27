@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:jereposteria/compartido/tipos/enums.dart';
+import 'package:jereposteria/compartido/compartido.dart';
 import 'package:jereposteria/core/router/rutas.dart';
-import 'package:jereposteria/core/sesion/sesion.dart';
+import 'package:jereposteria/data/data.dart';
 import 'package:jereposteria/features/alertas/alertas_pantalla.dart';
 import 'package:jereposteria/features/auth/login_pantalla.dart';
 import 'package:jereposteria/features/caja/caja_pantalla.dart';
@@ -147,6 +147,56 @@ const List<_DestinoMenu> _destinosMenu = [
   ),
 ];
 
+class _IndicadorSyncCompacto extends StatelessWidget {
+  const _IndicadorSyncCompacto({this.sync});
+  final EstadoSync? sync;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final conectado = sync?.conectado ?? false;
+    final pendientes = sync?.cambiosPendientes ?? 0;
+
+    IconData icono = Icons.cloud_done_outlined;
+    Color color = cs.primary;
+    String texto = 'Al día';
+
+    if (!conectado) {
+      icono = Icons.cloud_off_outlined;
+      color = cs.outline;
+      texto = 'Offline';
+    } else if (pendientes > 0) {
+      icono = Icons.sync;
+      color = cs.secondary;
+      texto = '$pendientes pend.';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icono, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            texto,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ShellAdaptativo extends ConsumerWidget {
   const _ShellAdaptativo({required this.ubicacion, required this.child});
 
@@ -165,14 +215,26 @@ class _ShellAdaptativo extends ConsumerWidget {
     return 0;
   }
 
+  Widget _iconoDestino(_DestinoMenu d, int noLeidas) {
+    if (d.ruta == Rutas.alertas && noLeidas > 0) {
+      return Badge.count(count: noLeidas, child: Icon(d.icono));
+    }
+    return Icon(d.icono);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final permisos = ref.watch(permisosActualesProvider);
+    final perfil = ref.watch(perfilActualProvider).value;
+    final sync = ref.watch(estadoSyncProvider).value;
+    final noLeidas = ref.watch(cantidadAlertasNoLeidasProvider).value ?? 0;
+
     final visibles = _destinosMenu
         .where((d) => d.visiblePara(permisos))
         .toList();
     final esEscritorio = MediaQuery.sizeOf(context).width >= 840;
     final idx = _indiceActual(visibles);
+    final tema = Theme.of(context);
 
     if (esEscritorio) {
       return Scaffold(
@@ -186,12 +248,58 @@ class _ShellAdaptativo extends ConsumerWidget {
                     child: NavigationRail(
                       selectedIndex: idx,
                       labelType: NavigationRailLabelType.all,
+                      leading: Padding(
+                        padding: const EdgeInsets.only(top: 8, bottom: 8),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: tema.colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.bakery_dining,
+                                size: 26,
+                                color: tema.colorScheme.onPrimaryContainer,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'JeRepostería',
+                              style: tema.textTheme.labelMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      trailing: Padding(
+                        padding: const EdgeInsets.only(top: 12, bottom: 16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _IndicadorSyncCompacto(sync: sync),
+                            if (perfil != null) ...[
+                              const SizedBox(height: 10),
+                              Tooltip(
+                                message:
+                                    '${perfil.nombre} (${perfil.esJefe ? "Jefe" : "Empleado"})',
+                                child: Avatar(perfil.nombre, radio: 16),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                       onDestinationSelected: (i) =>
                           context.go(visibles[i].ruta),
                       destinations: [
                         for (final d in visibles)
                           NavigationRailDestination(
-                            icon: Icon(d.icono),
+                            icon: _iconoDestino(d, noLeidas),
                             label: Text(d.etiqueta),
                           ),
                       ],
@@ -210,6 +318,9 @@ class _ShellAdaptativo extends ConsumerWidget {
     final principales = visibles.take(4).toList();
     final tieneMas = visibles.length > 4;
     final idxCompacto = idx < principales.length ? idx : principales.length;
+    final alertasEnMas =
+        visibles.skip(4).any((d) => d.ruta == Rutas.alertas) && noLeidas > 0;
+
     return Scaffold(
       body: child,
       bottomNavigationBar: principales.length >= 2
@@ -221,25 +332,106 @@ class _ShellAdaptativo extends ConsumerWidget {
                 if (tieneMas && i == principales.length) {
                   showModalBottomSheet<void>(
                     context: context,
+                    isScrollControlled: true,
                     showDragHandle: true,
                     builder: (ctx) => SafeArea(
-                      child: ListView(
-                        shrinkWrap: true,
-                        children: [
-                          for (final d in visibles)
-                            ListTile(
-                              leading: Icon(d.icono),
-                              title: Text(d.etiqueta),
-                              selected:
-                                  ubicacion == d.ruta ||
-                                  (d.ruta != Rutas.inicio &&
-                                      ubicacion.startsWith(d.ruta)),
-                              onTap: () {
-                                Navigator.of(ctx).pop();
-                                context.go(d.ruta);
-                              },
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: tema.colorScheme.primaryContainer,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    Icons.grid_view_rounded,
+                                    size: 20,
+                                    color: tema.colorScheme.onPrimaryContainer,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Más módulos',
+                                    style: tema.textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.close),
+                                  onPressed: () => Navigator.of(ctx).pop(),
+                                ),
+                              ],
                             ),
-                        ],
+                            const SizedBox(height: 12),
+                            const Divider(),
+                            const SizedBox(height: 8),
+                            Flexible(
+                              child: ListView.separated(
+                                shrinkWrap: true,
+                                itemCount: visibles.length,
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(height: 6),
+                                itemBuilder: (context, idx) {
+                                  final d = visibles[idx];
+                                  final esSeleccionado =
+                                      ubicacion == d.ruta ||
+                                      (d.ruta != Rutas.inicio &&
+                                          ubicacion.startsWith(d.ruta));
+                                  final cs = Theme.of(context).colorScheme;
+                                  return Material(
+                                    color: esSeleccionado
+                                        ? cs.primaryContainer.withValues(
+                                            alpha: 0.5,
+                                          )
+                                        : cs.surfaceContainerLowest,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      side: BorderSide(
+                                        color: esSeleccionado
+                                            ? cs.primary
+                                            : cs.outlineVariant.withValues(
+                                                alpha: 0.65,
+                                              ),
+                                      ),
+                                    ),
+                                    child: ListTile(
+                                      leading: _iconoDestino(d, noLeidas),
+                                      title: Text(
+                                        d.etiqueta,
+                                        style: TextStyle(
+                                          fontWeight: esSeleccionado
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                        ),
+                                      ),
+                                      trailing:
+                                          d.ruta == Rutas.alertas &&
+                                              noLeidas > 0
+                                          ? Badge.count(count: noLeidas)
+                                          : const Icon(
+                                              Icons.chevron_right,
+                                              size: 20,
+                                            ),
+                                      selected: esSeleccionado,
+                                      onTap: () {
+                                        Navigator.of(ctx).pop();
+                                        context.go(d.ruta);
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );
@@ -249,10 +441,18 @@ class _ShellAdaptativo extends ConsumerWidget {
               },
               destinations: [
                 for (final d in principales)
-                  NavigationDestination(icon: Icon(d.icono), label: d.etiqueta),
+                  NavigationDestination(
+                    icon: _iconoDestino(d, noLeidas),
+                    label: d.etiqueta,
+                  ),
                 if (tieneMas)
-                  const NavigationDestination(
-                    icon: Icon(Icons.menu),
+                  NavigationDestination(
+                    icon: alertasEnMas
+                        ? Badge.count(
+                            count: noLeidas,
+                            child: const Icon(Icons.menu),
+                          )
+                        : const Icon(Icons.menu),
                     label: 'Más',
                   ),
               ],

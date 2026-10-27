@@ -22,10 +22,13 @@ class _ClienteFormularioPantallaState
 
   String _nombre = '';
   String _telefono = '';
+  String _email = '';
   String _direccion = '';
   int? _cumpleDia;
   int? _cumpleMes;
   int? _cumpleAnio;
+  String _preferencias = '';
+  String _alergias = '';
   HabitualModo _habitualModo = HabitualModo.auto;
   String _notas = '';
 
@@ -34,10 +37,13 @@ class _ClienteFormularioPantallaState
     _inicializado = true;
     _nombre = c.nombre;
     _telefono = c.telefono ?? '';
+    _email = c.email ?? '';
     _direccion = c.direccion ?? '';
     _cumpleDia = c.cumpleDia;
     _cumpleMes = c.cumpleMes;
     _cumpleAnio = c.cumpleAnio;
+    _preferencias = c.preferencias ?? '';
+    _alergias = c.alergias ?? '';
     _habitualModo = c.habitualModo;
     _notas = c.notas ?? '';
   }
@@ -45,14 +51,17 @@ class _ClienteFormularioPantallaState
   Future<void> _guardar() async {
     if (!_formKey.currentState!.validate()) return;
     final datos = ClienteDatos(
-      nombre: _nombre,
-      telefono: _telefono.isEmpty ? null : _telefono,
-      direccion: _direccion.isEmpty ? null : _direccion,
+      nombre: _nombre.trim(),
+      telefono: _telefono.trim().isEmpty ? null : _telefono.trim(),
+      email: _email.trim().isEmpty ? null : _email.trim(),
+      direccion: _direccion.trim().isEmpty ? null : _direccion.trim(),
       cumpleDia: _cumpleDia,
       cumpleMes: _cumpleMes,
       cumpleAnio: _cumpleAnio,
+      preferencias: _preferencias.trim().isEmpty ? null : _preferencias.trim(),
+      alergias: _alergias.trim().isEmpty ? null : _alergias.trim(),
       habitualModo: _habitualModo,
-      notas: _notas.isEmpty ? null : _notas,
+      notas: _notas.trim().isEmpty ? null : _notas.trim(),
     );
     final repo = ref.read(clientesRepositorioProvider);
     if (widget.esEdicion) {
@@ -63,7 +72,9 @@ class _ClienteFormularioPantallaState
     if (mounted) {
       mostrarExito(
         context,
-        widget.esEdicion ? 'Cliente actualizado.' : 'Cliente creado.',
+        widget.esEdicion
+            ? 'Cliente actualizado con éxito.'
+            : 'Cliente creado con éxito.',
       );
       context.pop();
     }
@@ -73,51 +84,94 @@ class _ClienteFormularioPantallaState
     return FormularioResponsivo(
       formKey: _formKey,
       campos: [
-        CampoTexto(
-          etiqueta: 'Nombre y apellido',
-          valorInicial: _nombre,
-          obligatorio: true,
+        TarjetaSeccion(
+          titulo: 'Datos personales y contacto',
           icono: Icons.person_outline,
-          onChanged: (v) => _nombre = v,
+          children: [
+            CampoTexto(
+              etiqueta: 'Nombre y apellido',
+              valorInicial: _nombre,
+              obligatorio: true,
+              icono: Icons.person_outline,
+              onChanged: (v) => _nombre = v,
+            ),
+            Separacion.media,
+            CampoTexto(
+              etiqueta: 'Teléfono / WhatsApp',
+              valorInicial: _telefono,
+              teclado: TextInputType.phone,
+              icono: Icons.phone_outlined,
+              onChanged: (v) => _telefono = v,
+            ),
+            Separacion.media,
+            CampoTexto(
+              etiqueta: 'Correo electrónico (opcional)',
+              valorInicial: _email,
+              teclado: TextInputType.emailAddress,
+              icono: Icons.email_outlined,
+              onChanged: (v) => _email = v,
+            ),
+            Separacion.media,
+            CampoTexto(
+              etiqueta: 'Dirección de entrega habitual',
+              valorInicial: _direccion,
+              icono: Icons.place_outlined,
+              onChanged: (v) => _direccion = v,
+            ),
+          ],
         ),
-        CampoTexto(
-          etiqueta: 'Teléfono / WhatsApp',
-          valorInicial: _telefono,
-          teclado: TextInputType.phone,
-          icono: Icons.phone_outlined,
-          onChanged: (v) => _telefono = v,
+        TarjetaSeccion(
+          titulo: 'Cumpleaños y fidelidad',
+          icono: Icons.cake_outlined,
+          children: [
+            CampoCumpleanos(
+              dia: _cumpleDia,
+              mes: _cumpleMes,
+              anio: _cumpleAnio,
+              onChanged: (d, m, a) => setState(() {
+                _cumpleDia = d;
+                _cumpleMes = m;
+                _cumpleAnio = a;
+              }),
+            ),
+            Separacion.media,
+            SelectorOpcion<HabitualModo>(
+              etiqueta: 'Condición de cliente habitual',
+              opciones: HabitualModo.values,
+              valor: _habitualModo,
+              etiquetaDe: (m) => m.etiqueta,
+              onChanged: (v) {
+                if (v != null) setState(() => _habitualModo = v);
+              },
+            ),
+          ],
         ),
-        CampoTexto(
-          etiqueta: 'Dirección de entrega',
-          valorInicial: _direccion,
-          icono: Icons.place_outlined,
-          onChanged: (v) => _direccion = v,
-        ),
-        CampoCumpleanos(
-          dia: _cumpleDia,
-          mes: _cumpleMes,
-          anio: _cumpleAnio,
-          onChanged: (d, m, a) => setState(() {
-            _cumpleDia = d;
-            _cumpleMes = m;
-            _cumpleAnio = a;
-          }),
-        ),
-        SelectorOpcion<HabitualModo>(
-          etiqueta: 'Condición de cliente habitual',
-          opciones: HabitualModo.values,
-          valor: _habitualModo,
-          etiquetaDe: (m) => m.etiqueta,
-          onChanged: (v) {
-            if (v != null) setState(() => _habitualModo = v);
-          },
-        ),
-        CampoTexto(
-          etiqueta: 'Gustos, alergias o notas',
-          valorInicial: _notas,
-          maxLineas: 3,
+        TarjetaSeccion(
+          titulo: 'Preferencias y observaciones',
           icono: Icons.notes_outlined,
-          onChanged: (v) => _notas = v,
+          children: [
+            CampoTexto(
+              etiqueta: 'Preferencias (sabores preferidos, temáticas)',
+              valorInicial: _preferencias,
+              icono: Icons.favorite_border,
+              onChanged: (v) => _preferencias = v,
+            ),
+            Separacion.media,
+            CampoTexto(
+              etiqueta: 'Alergias o restricciones alimentarias',
+              valorInicial: _alergias,
+              icono: Icons.warning_amber_outlined,
+              onChanged: (v) => _alergias = v,
+            ),
+            Separacion.media,
+            CampoTexto(
+              etiqueta: 'Notas generales del cliente',
+              valorInicial: _notas,
+              maxLineas: 3,
+              icono: Icons.notes_outlined,
+              onChanged: (v) => _notas = v,
+            ),
+          ],
         ),
       ],
       botonGuardar: BotonGuardar(

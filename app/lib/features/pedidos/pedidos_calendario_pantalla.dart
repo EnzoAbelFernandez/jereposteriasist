@@ -75,6 +75,88 @@ class _PedidosCalendarioPantallaState
     return total;
   }
 
+  Widget _construirIndicadorSaldo(BuildContext context, PedidoResumen r) {
+    final tema = Theme.of(context);
+    if (r.pedido.estado == EstadoPedido.cancelado) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: tema.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          'Cancelado',
+          style: tema.textTheme.labelSmall?.copyWith(
+            color: tema.colorScheme.outline,
+          ),
+        ),
+      );
+    }
+
+    if (r.pagadoCompleto) {
+      final paletaExito = resolverColorEstado(context, ColorEstado.exito);
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: paletaExito.fondo,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.check_circle_outline,
+              size: 13,
+              color: paletaExito.frente,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Pagado',
+              style: tema.textTheme.labelSmall?.copyWith(
+                color: paletaExito.frente,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final paletaPeligro = resolverColorEstado(context, ColorEstado.peligro);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: paletaPeligro.fondo,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.pending_actions_outlined,
+            size: 13,
+            color: paletaPeligro.frente,
+          ),
+          const SizedBox(width: 3),
+          Text(
+            'Adeuda ',
+            style: tema.textTheme.labelSmall?.copyWith(
+              color: paletaPeligro.frente,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          TextoDinero(
+            r.saldo,
+            estilo: tema.textTheme.labelSmall?.copyWith(
+              color: paletaPeligro.frente,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
@@ -98,8 +180,19 @@ class _PedidosCalendarioPantallaState
       return delDia;
     });
 
+    final totalEntregasDia = _contarEntregas(_diaSeleccionado, pedidosDelMes);
+
     return PantallaBase(
       titulo: 'Calendario de entregas',
+      botonFlotante: RequierePermiso(
+        modulo: Modulo.pedidos,
+        nivel: NivelPermiso.cargar,
+        child: FloatingActionButton.extended(
+          onPressed: () => context.push(Rutas.pedidoNuevo()),
+          icon: const Icon(Icons.add),
+          label: const Text('Nuevo pedido'),
+        ),
+      ),
       cuerpo: Column(
         children: [
           _construirNavegacionMes(context),
@@ -134,6 +227,26 @@ class _PedidosCalendarioPantallaState
                           color: tema.colorScheme.onSurfaceVariant,
                         ),
                       ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: tema.colorScheme.secondaryContainer,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          totalEntregasDia == 1
+                              ? '1 entrega'
+                              : '$totalEntregasDia entregas',
+                          style: tema.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: tema.colorScheme.onSecondaryContainer,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -148,44 +261,189 @@ class _PedidosCalendarioPantallaState
                     itemBuilder: (context, r) {
                       final tienePrimerItem =
                           r.primerItem != null && r.primerItem!.isNotEmpty;
+                      final resumenItems = tienePrimerItem
+                          ? (r.cantidadItems > 1
+                                ? '${r.primerItem!} + ${r.cantidadItems - 1} más'
+                                : r.primerItem!)
+                          : null;
+
                       return Card(
-                        clipBehavior: Clip.antiAlias,
+                        elevation: 0,
                         margin: const EdgeInsets.symmetric(
                           horizontal: 16,
-                          vertical: 4,
+                          vertical: 5,
                         ),
-                        child: ListTile(
-                          leading: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: tema.colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              formatearHora(r.pedido.fechaEntrega),
-                              style: tema.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(
+                            color: tema.colorScheme.outlineVariant.withValues(
+                              alpha: 0.6,
                             ),
                           ),
-                          title: Text(
-                            r.clienteNombre,
-                            style: tema.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: tienePrimerItem
-                              ? Text(
-                                  r.primerItem!,
-                                  overflow: TextOverflow.ellipsis,
-                                )
-                              : null,
-                          trailing: InsigniaEstadoPedido(r.pedido.estado),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
                           onTap: () => context.push(Rutas.pedido(r.pedido.id)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            tema.colorScheme.primaryContainer,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.schedule,
+                                            size: 14,
+                                            color: tema
+                                                .colorScheme
+                                                .onPrimaryContainer,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            formatearHora(
+                                              r.pedido.fechaEntrega,
+                                            ),
+                                            style: tema.textTheme.labelMedium
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: tema
+                                                      .colorScheme
+                                                      .onPrimaryContainer,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: tema
+                                            .colorScheme
+                                            .surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        r.pedido.numeroTexto,
+                                        style: tema.textTheme.labelSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        r.clienteNombre,
+                                        style: tema.textTheme.titleMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    InsigniaEstadoPedido(r.pedido.estado),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      r.pedido.tipoEntrega == TipoEntrega.envio
+                                          ? Icons.local_shipping_outlined
+                                          : Icons.storefront_outlined,
+                                      size: 15,
+                                      color: tema.colorScheme.onSurfaceVariant,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      r.pedido.tipoEntrega.etiqueta,
+                                      style: tema.textTheme.bodySmall?.copyWith(
+                                        color:
+                                            tema.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                    if (resumenItems != null) ...[
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '•',
+                                        style: TextStyle(
+                                          color:
+                                              tema.colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          resumenItems,
+                                          style: tema.textTheme.bodySmall
+                                              ?.copyWith(
+                                                color: tema
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Divider(
+                                  height: 1,
+                                  color: tema.colorScheme.outlineVariant
+                                      .withValues(alpha: 0.4),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          'Total: ',
+                                          style: tema.textTheme.bodySmall
+                                              ?.copyWith(
+                                                color: tema
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
+                                        ),
+                                        TextoDinero(
+                                          r.total,
+                                          estilo: tema.textTheme.titleSmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                    _construirIndicadorSaldo(context, r),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       );
                     },

@@ -84,16 +84,20 @@ class ProduccionDetallePantalla extends ConsumerWidget {
                 ),
               ],
               TarjetaSeccion(
-                titulo: 'Datos',
-                accion: d.produccion.anulada
-                    ? const InsigniaEstado(
-                        texto: 'Anulada',
-                        color: ColorEstado.peligro,
-                      )
-                    : null,
+                titulo: 'Datos del lote',
+                icono: Icons.bakery_dining_outlined,
+                accion: InsigniaEstado(
+                  texto: d.produccion.anulada ? 'Anulada' : 'Elaborado',
+                  color: d.produccion.anulada
+                      ? ColorEstado.peligro
+                      : ColorEstado.exito,
+                  icono: d.produccion.anulada
+                      ? Icons.block_outlined
+                      : Icons.check_circle_outline,
+                ),
                 children: [
                   FilaDato(
-                    etiqueta: 'Fecha',
+                    etiqueta: 'Fecha de elaboración',
                     valor: formatearFechaHora(d.produccion.fecha),
                     icono: Icons.calendar_today_outlined,
                   ),
@@ -103,8 +107,8 @@ class ProduccionDetallePantalla extends ConsumerWidget {
                     icono: Icons.description_outlined,
                   ),
                   FilaDato(
-                    etiqueta: 'Cantidad',
-                    valor: '${d.produccion.cantidad}',
+                    etiqueta: 'Cantidad elaborada',
+                    valor: '${d.produccion.cantidad} unidad(es)',
                     icono: Icons.tag_outlined,
                   ),
                   if (d.producto != null)
@@ -131,7 +135,7 @@ class ProduccionDetallePantalla extends ConsumerWidget {
                           context.push(Rutas.pedido(d.produccion.pedidoId!)),
                     ),
                   FilaDato(
-                    etiqueta: 'Registrado por',
+                    etiqueta: 'Responsable asignado',
                     valor: d.creadoPorNombre,
                     icono: Icons.person_outline,
                   ),
@@ -144,12 +148,13 @@ class ProduccionDetallePantalla extends ConsumerWidget {
               ),
               TarjetaSeccion(
                 titulo: 'Insumos consumidos',
+                icono: Icons.kitchen_outlined,
                 children: [
                   if (d.consumos.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Text(
-                        'No se registraron consumos de insumos',
+                        'No se registraron consumos de insumos para este lote.',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -160,11 +165,23 @@ class ProduccionDetallePantalla extends ConsumerWidget {
                       if (i > 0) const Divider(height: 1),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.kitchen_outlined),
-                        title: Text(d.consumos[i].insumoNombre),
+                        leading: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          foregroundColor: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant,
+                          child: const Icon(Icons.kitchen_outlined, size: 18),
+                        ),
+                        title: Text(
+                          d.consumos[i].insumoNombre,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
                         trailing: Text(
                           d.consumos[i].cantidadTexto,
-                          style: Theme.of(context).textTheme.bodyMedium
+                          style: Theme.of(context).textTheme.titleSmall
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                       ),

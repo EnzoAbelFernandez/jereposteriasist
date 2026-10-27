@@ -62,7 +62,9 @@ class _ConfiguracionPantallaState extends ConsumerState<ConfiguracionPantalla> {
 
   @override
   Widget build(BuildContext context) {
+    final tema = Theme.of(context);
     final asyncConfig = ref.watch(configuracionProvider);
+    final miPerfil = ref.watch(perfilActualProvider).value;
 
     return PantallaBase(
       titulo: 'Configuración',
@@ -80,6 +82,97 @@ class _ConfiguracionPantallaState extends ConsumerState<ConfiguracionPantalla> {
           return FormularioResponsivo(
             formKey: _formKey,
             campos: [
+              if (miPerfil != null) ...[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.account_circle_outlined,
+                        size: 20,
+                        color: tema.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Perfil propio',
+                        style: tema.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: tema.colorScheme.outlineVariant.withValues(
+                        alpha: 0.5,
+                      ),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        Avatar(miPerfil.nombre, radio: 22),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                miPerfil.nombre,
+                                style: tema.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (miPerfil.telefono != null &&
+                                  miPerfil.telefono!.isNotEmpty)
+                                Text(
+                                  miPerfil.telefono!,
+                                  style: tema.textTheme.bodySmall?.copyWith(
+                                    color: tema.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        InsigniaEstado(
+                          texto: miPerfil.rol.etiqueta,
+                          color: miPerfil.esJefe
+                              ? ColorEstado.info
+                              : ColorEstado.neutro,
+                          icono: miPerfil.esJefe
+                              ? Icons.admin_panel_settings_outlined
+                              : Icons.badge_outlined,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Separacion.chica,
+              ],
+              Padding(
+                padding: const EdgeInsets.only(top: 6, bottom: 2),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.storefront_outlined,
+                      size: 20,
+                      color: tema.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Datos de la pastelería',
+                      style: tema.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               CampoTexto(
                 etiqueta: 'Nombre de la repostería',
                 valorInicial: _nombreNegocio,
@@ -89,10 +182,21 @@ class _ConfiguracionPantallaState extends ConsumerState<ConfiguracionPantalla> {
               ),
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'Cumpleaños',
-                  style: Theme.of(context).textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.cake_outlined,
+                      size: 18,
+                      color: tema.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Alertas de cumpleaños',
+                      style: tema.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               CampoEntero(
@@ -112,10 +216,21 @@ class _ConfiguracionPantallaState extends ConsumerState<ConfiguracionPantalla> {
               ),
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'Cliente habitual automático',
-                  style: Theme.of(context).textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.star_outline,
+                      size: 18,
+                      color: tema.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Cliente habitual automático',
+                      style: tema.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               CampoEntero(
@@ -133,8 +248,61 @@ class _ConfiguracionPantallaState extends ConsumerState<ConfiguracionPantalla> {
                 obligatorio: true,
                 onChanged: (v) => _habitualMeses = v,
               ),
+              Padding(
+                padding: const EdgeInsets.only(top: 10, bottom: 2),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.backup_outlined,
+                      size: 20,
+                      color: tema.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Copia de seguridad y exportación',
+                      style: tema.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: tema.colorScheme.outlineVariant.withValues(
+                      alpha: 0.5,
+                    ),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Generá un archivo JSON con todos los datos locales para resguardo o para migrar a otro dispositivo.',
+                        style: tema.textTheme.bodySmall?.copyWith(
+                          color: tema.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _exportarBackup,
+                        icon: const Icon(Icons.download_outlined, size: 18),
+                        label: const Text('Exportar copia de seguridad (JSON)'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
-            botonGuardar: BotonGuardar(texto: 'Guardar', onGuardar: _guardar),
+            botonGuardar: BotonGuardar(
+              texto: 'Guardar configuración',
+              onGuardar: _guardar,
+            ),
           );
         },
       ),

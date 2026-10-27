@@ -21,6 +21,7 @@ class _ClientesListaPantallaState extends ConsumerState<ClientesListaPantalla> {
 
   @override
   Widget build(BuildContext context) {
+    final tema = Theme.of(context);
     final asyncBase = ref.watch(clientesProvider(_busqueda));
     final fechaBase = hoy();
     final asyncClientes = asyncBase.whenData((lista) {
@@ -65,6 +66,7 @@ class _ClientesListaPantallaState extends ConsumerState<ClientesListaPantalla> {
           Expanded(
             child: ListaAsync<Cliente>(
               valor: asyncClientes,
+              separadores: false,
               vacio: EstadoVacio(
                 icono: Icons.people_outline,
                 mensaje: 'Todavía no cargaste clientes',
@@ -73,32 +75,135 @@ class _ClientesListaPantallaState extends ConsumerState<ClientesListaPantalla> {
               ),
               itemBuilder: (context, c) {
                 final diasCumple = c.diasParaCumple(fechaBase);
-                final subtitulo = [
-                  if (c.telefono != null && c.telefono!.isNotEmpty) c.telefono!,
-                  if (c.cumpleTexto != null) 'Cumple: ${c.cumpleTexto!}',
-                ].join(' • ');
-                return ListTile(
-                  leading: Avatar(c.nombre),
-                  title: Row(
-                    children: [
-                      Flexible(child: Text(c.nombre)),
-                      if (c.esHabitual) ...[
-                        Separacion.chica,
-                        const InsigniaHabitual(),
-                      ],
-                    ],
+                final tieneTelefono =
+                    c.telefono != null && c.telefono!.trim().isNotEmpty;
+                final tieneCumple = c.cumpleTexto != null;
+
+                return Card(
+                  elevation: 0,
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
                   ),
-                  subtitle: subtitulo.isNotEmpty ? Text(subtitulo) : null,
-                  trailing: diasCumple != null && diasCumple <= 7
-                      ? InsigniaEstado(
-                          texto: diasCumple == 0
-                              ? '¡Cumple hoy!'
-                              : 'Cumple en $diasCumple d',
-                          color: ColorEstado.info,
-                          icono: Icons.cake_outlined,
-                        )
-                      : const Icon(Icons.chevron_right),
-                  onTap: () => context.push(Rutas.cliente(c.id)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: BorderSide(
+                      color: tema.colorScheme.outlineVariant.withValues(
+                        alpha: 0.5,
+                      ),
+                    ),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () => context.push(Rutas.cliente(c.id)),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      child: Row(
+                        children: [
+                          Avatar(c.nombre, radio: 22),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        c.nombre,
+                                        style: tema.textTheme.titleMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (c.esHabitual) ...[
+                                      const SizedBox(width: 6),
+                                      const InsigniaHabitual(),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    if (tieneTelefono) ...[
+                                      Icon(
+                                        Icons.phone_outlined,
+                                        size: 14,
+                                        color:
+                                            tema.colorScheme.onSurfaceVariant,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        c.telefono!,
+                                        style: tema.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: tema
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                      ),
+                                    ],
+                                    if (tieneTelefono && tieneCumple) ...[
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '•',
+                                        style: TextStyle(
+                                          color:
+                                              tema.colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                    ],
+                                    if (tieneCumple) ...[
+                                      Icon(
+                                        Icons.cake_outlined,
+                                        size: 14,
+                                        color:
+                                            tema.colorScheme.onSurfaceVariant,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          c.cumpleTexto!,
+                                          style: tema.textTheme.bodySmall
+                                              ?.copyWith(
+                                                color: tema
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          if (diasCumple != null && diasCumple <= 7)
+                            InsigniaEstado(
+                              texto: diasCumple == 0
+                                  ? '¡Cumple hoy!'
+                                  : 'Cumple en $diasCumple d',
+                              color: ColorEstado.info,
+                              icono: Icons.cake_outlined,
+                            )
+                          else
+                            Icon(
+                              Icons.chevron_right,
+                              color: tema.colorScheme.onSurfaceVariant,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
                 );
               },
             ),

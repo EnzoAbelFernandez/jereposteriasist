@@ -81,6 +81,306 @@ class PedidoDetallePantalla extends ConsumerWidget {
     );
   }
 
+  Widget _construirBarraProgreso(BuildContext context, EstadoPedido estado) {
+    final tema = Theme.of(context);
+    if (estado == EstadoPedido.cancelado) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: tema.colorScheme.errorContainer,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.cancel_outlined,
+              color: tema.colorScheme.onErrorContainer,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Este pedido fue cancelado',
+              style: tema.textTheme.bodyMedium?.copyWith(
+                color: tema.colorScheme.onErrorContainer,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final pasos = [
+      (
+        etiqueta: estado == EstadoPedido.presupuesto
+            ? 'Presupuesto'
+            : 'Confirmado',
+        icono: estado == EstadoPedido.presupuesto
+            ? Icons.receipt_outlined
+            : Icons.check_circle_outline,
+      ),
+      (etiqueta: 'En producción', icono: Icons.bakery_dining_outlined),
+      (etiqueta: 'Listo', icono: Icons.done_all),
+      (etiqueta: 'Entregado', icono: Icons.handshake_outlined),
+    ];
+
+    int pasoActual;
+    switch (estado) {
+      case EstadoPedido.presupuesto:
+      case EstadoPedido.confirmado:
+        pasoActual = 0;
+        break;
+      case EstadoPedido.enProduccion:
+        pasoActual = 1;
+        break;
+      case EstadoPedido.listo:
+        pasoActual = 2;
+        break;
+      case EstadoPedido.entregado:
+        pasoActual = 3;
+        break;
+      case EstadoPedido.cancelado:
+        pasoActual = 0;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: tema.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: tema.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < pasos.length; i++) ...[
+            if (i > 0)
+              Expanded(
+                child: Container(
+                  height: 3,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: i <= pasoActual
+                        ? tema.colorScheme.primary
+                        : tema.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: i < pasoActual
+                      ? tema.colorScheme.primaryContainer
+                      : (i == pasoActual
+                            ? tema.colorScheme.primary
+                            : tema.colorScheme.surfaceContainerHighest),
+                  foregroundColor: i < pasoActual
+                      ? tema.colorScheme.onPrimaryContainer
+                      : (i == pasoActual
+                            ? tema.colorScheme.onPrimary
+                            : tema.colorScheme.outline),
+                  child: Icon(
+                    i < pasoActual ? Icons.check : pasos[i].icono,
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  pasos[i].etiqueta,
+                  style: tema.textTheme.labelSmall?.copyWith(
+                    fontWeight: i == pasoActual
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                    color: i <= pasoActual
+                        ? tema.colorScheme.onSurface
+                        : tema.colorScheme.outline,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _construirResumenFinanciero(BuildContext context, PedidoDetalle d) {
+    final tema = Theme.of(context);
+    final adeuda =
+        d.saldo.esPositivo && d.pedido.estado != EstadoPedido.cancelado;
+
+    return TarjetaSeccion(
+      titulo: 'Resumen financiero',
+      icono: Icons.payments_outlined,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: tema.colorScheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: tema.colorScheme.outlineVariant.withValues(
+                      alpha: 0.5,
+                    ),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Total',
+                      style: tema.textTheme.labelSmall?.copyWith(
+                        color: tema.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    TextoDinero(
+                      d.total,
+                      estilo: tema.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: tema.colorScheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: tema.colorScheme.outlineVariant.withValues(
+                      alpha: 0.5,
+                    ),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pagado',
+                      style: tema.textTheme.labelSmall?.copyWith(
+                        color: tema.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    TextoDinero(
+                      d.pagado,
+                      estilo: tema.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: tema.colorScheme.tertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: adeuda
+                      ? tema.colorScheme.errorContainer
+                      : (d.pedido.estado == EstadoPedido.cancelado
+                            ? tema.colorScheme.surfaceContainerHighest
+                            : tema.colorScheme.tertiaryContainer),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          adeuda
+                              ? Icons.warning_amber_rounded
+                              : (d.pedido.estado == EstadoPedido.cancelado
+                                    ? Icons.cancel_outlined
+                                    : Icons.check_circle_outline),
+                          size: 13,
+                          color: adeuda
+                              ? tema.colorScheme.onErrorContainer
+                              : (d.pedido.estado == EstadoPedido.cancelado
+                                    ? tema.colorScheme.outline
+                                    : tema.colorScheme.onTertiaryContainer),
+                        ),
+                        const SizedBox(width: 3),
+                        Expanded(
+                          child: Text(
+                            adeuda ? 'Adeuda' : 'Saldo',
+                            style: tema.textTheme.labelSmall?.copyWith(
+                              color: adeuda
+                                  ? tema.colorScheme.onErrorContainer
+                                  : (d.pedido.estado == EstadoPedido.cancelado
+                                        ? tema.colorScheme.outline
+                                        : tema.colorScheme.onTertiaryContainer),
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    if (adeuda)
+                      TextoDinero(
+                        d.saldo,
+                        estilo: tema.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: tema.colorScheme.onErrorContainer,
+                        ),
+                      )
+                    else if (d.pedido.estado == EstadoPedido.cancelado)
+                      Text(
+                        '-',
+                        style: tema.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: tema.colorScheme.outline,
+                        ),
+                      )
+                    else
+                      Text(
+                        'Al día',
+                        style: tema.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: tema.colorScheme.onTertiaryContainer,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (adeuda) ...[
+          Separacion.media,
+          RequierePermiso(
+            modulo: Modulo.pedidos,
+            nivel: NivelPermiso.cargar,
+            child: FilledButton.icon(
+              onPressed: () => mostrarDialogoPagoPedido(context, d),
+              icon: const Icon(Icons.payments_outlined),
+              label: const Text('Registrar cobro / seña'),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tema = Theme.of(context);
@@ -132,10 +432,13 @@ class PedidoDetallePantalla extends ConsumerWidget {
           cuerpo: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // Sección Estado y acciones rápidas
+              // Sección Estado y evolución
               TarjetaSeccion(
-                titulo: 'Estado del pedido',
+                titulo: 'Evolución del pedido',
+                icono: Icons.timeline_outlined,
                 children: [
+                  _construirBarraProgreso(context, d.pedido.estado),
+                  Separacion.media,
                   Row(
                     children: [
                       InsigniaEstadoPedido(d.pedido.estado),
@@ -185,7 +488,7 @@ class PedidoDetallePantalla extends ConsumerWidget {
                     const Divider(),
                     Separacion.chica,
                     Text(
-                      'Acciones rápidas',
+                      'Cambiar estado',
                       style: tema.textTheme.labelLarge?.copyWith(
                         color: tema.colorScheme.onSurfaceVariant,
                       ),
@@ -227,57 +530,47 @@ class PedidoDetallePantalla extends ConsumerWidget {
                 ],
               ),
 
+              // Resumen Financiero destacado
+              _construirResumenFinanciero(context, d),
+
               // Sección Cliente
               TarjetaSeccion(
                 titulo: 'Cliente',
+                icono: Icons.person_outline,
                 accion: d.cliente.esHabitual ? const InsigniaHabitual() : null,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.person_outline,
-                          size: 18,
-                          color: tema.colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 8),
-                        SizedBox(
-                          width: 140,
-                          child: Text(
-                            'Nombre',
-                            style: tema.textTheme.bodyMedium?.copyWith(
-                              color: tema.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
+                        Avatar(d.cliente.nombre, radio: 22),
+                        const SizedBox(width: 12),
                         Expanded(
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Flexible(
-                                child: Text(
-                                  d.cliente.nombre,
-                                  style: tema.textTheme.bodyLarge?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                              Text(
+                                d.cliente.nombre,
+                                style: tema.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              if (d.cliente.esHabitual) ...[
-                                Separacion.chica,
-                                const InsigniaHabitual(),
-                              ],
+                              if (d.cliente.telefono != null &&
+                                  d.cliente.telefono!.trim().isNotEmpty)
+                                Text(
+                                  d.cliente.telefono!,
+                                  style: tema.textTheme.bodyMedium?.copyWith(
+                                    color: tema.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
                             ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                  FilaDato(
-                    etiqueta: 'Teléfono',
-                    valor: d.cliente.telefono,
-                    icono: Icons.phone_outlined,
-                  ),
+                  Separacion.chica,
                   FilaDato(
                     etiqueta: 'Tipo de entrega',
                     valor: d.pedido.tipoEntrega.etiqueta,
@@ -317,37 +610,61 @@ class PedidoDetallePantalla extends ConsumerWidget {
                         onPressed: () =>
                             context.push(Rutas.cliente(d.cliente.id)),
                         icon: const Icon(Icons.person_search_outlined),
-                        label: const Text('Ver ficha del cliente'),
+                        label: const Text('Ver ficha'),
                       ),
                     ],
                   ),
                 ],
               ),
 
-              // Sección Ítems
+              // Sección Ítems del pedido
               TarjetaSeccion(
                 titulo: 'Ítems del pedido',
+                icono: Icons.cake_outlined,
                 children: [
                   for (var i = 0; i < d.items.length; i++) ...[
-                    if (i > 0) const Divider(),
+                    if (i > 0)
+                      Divider(
+                        color: tema.colorScheme.outlineVariant.withValues(
+                          alpha: 0.4,
+                        ),
+                      ),
                     Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: tema.colorScheme.secondaryContainer,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${d.items[i].cantidad}×',
+                              style: tema.textTheme.labelMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: tema.colorScheme.onSecondaryContainer,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '${d.items[i].cantidad} × ${d.items[i].descripcion}',
+                                  d.items[i].descripcion,
                                   style: tema.textTheme.bodyLarge?.copyWith(
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                                 if (d.items[i].notas != null &&
                                     d.items[i].notas!.trim().isNotEmpty) ...[
-                                  Separacion.chica,
+                                  const SizedBox(height: 2),
                                   Text(
                                     d.items[i].notas!,
                                     style: tema.textTheme.bodySmall?.copyWith(
@@ -356,7 +673,7 @@ class PedidoDetallePantalla extends ConsumerWidget {
                                     ),
                                   ),
                                 ],
-                                Separacion.chica,
+                                const SizedBox(height: 2),
                                 Text(
                                   'Unitario: ${d.items[i].precioUnitario.formatear()}',
                                   style: tema.textTheme.bodySmall?.copyWith(
@@ -366,11 +683,11 @@ class PedidoDetallePantalla extends ConsumerWidget {
                               ],
                             ),
                           ),
-                          Separacion.media,
+                          const SizedBox(width: 12),
                           TextoDinero(
                             d.items[i].subtotal,
                             estilo: tema.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],
@@ -378,12 +695,22 @@ class PedidoDetallePantalla extends ConsumerWidget {
                     ),
                   ],
                   Separacion.chica,
-                  const Divider(thickness: 1.5),
+                  Divider(
+                    thickness: 1.5,
+                    color: tema.colorScheme.outlineVariant.withValues(
+                      alpha: 0.6,
+                    ),
+                  ),
                   Separacion.chica,
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Subtotal', style: tema.textTheme.bodyMedium),
+                      Text(
+                        'Subtotal',
+                        style: tema.textTheme.bodyMedium?.copyWith(
+                          color: tema.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                       TextoDinero(d.subtotal),
                     ],
                   ),
@@ -413,13 +740,13 @@ class PedidoDetallePantalla extends ConsumerWidget {
                     children: [
                       Text(
                         'Total',
-                        style: tema.textTheme.titleMedium?.copyWith(
+                        style: tema.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       TextoDinero(
                         d.total,
-                        estilo: tema.textTheme.titleMedium?.copyWith(
+                        estilo: tema.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -428,103 +755,11 @@ class PedidoDetallePantalla extends ConsumerWidget {
                 ],
               ),
 
-              // Sección Pagos y saldo
+              // Historial de pagos
               TarjetaSeccion(
-                titulo: 'Pagos y saldo',
+                titulo: 'Historial de pagos',
+                icono: Icons.history_outlined,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Total',
-                              style: tema.textTheme.bodySmall?.copyWith(
-                                color: tema.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            Separacion.chica,
-                            TextoDinero(
-                              d.total,
-                              estilo: tema.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Pagado',
-                              style: tema.textTheme.bodySmall?.copyWith(
-                                color: tema.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            Separacion.chica,
-                            TextoDinero(
-                              d.pagado,
-                              estilo: tema.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Saldo pendiente',
-                              style: tema.textTheme.bodySmall?.copyWith(
-                                color: tema.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            Separacion.chica,
-                            TextoDinero(
-                              d.saldo,
-                              estilo: tema.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: d.saldo.esPositivo
-                                    ? tema.colorScheme.error
-                                    : tema.colorScheme.tertiary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (d.saldo.esPositivo &&
-                      d.pedido.estado != EstadoPedido.cancelado) ...[
-                    Separacion.media,
-                    RequierePermiso(
-                      modulo: Modulo.pedidos,
-                      nivel: NivelPermiso.cargar,
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: FilledButton.icon(
-                          onPressed: () => mostrarDialogoPagoPedido(context, d),
-                          icon: const Icon(Icons.payments_outlined),
-                          label: const Text('Registrar cobro'),
-                        ),
-                      ),
-                    ),
-                  ],
-                  Separacion.media,
-                  const Divider(),
-                  Separacion.chica,
-                  Text(
-                    'Historial de pagos',
-                    style: tema.textTheme.labelLarge?.copyWith(
-                      color: tema.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  Separacion.chica,
                   if (d.pagos.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),

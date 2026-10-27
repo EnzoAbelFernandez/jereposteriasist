@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:jereposteria/core/sync/estado_sync.dart';
 
 abstract final class Separacion {
   static const SizedBox chica = SizedBox(height: 8, width: 8);
@@ -6,7 +8,7 @@ abstract final class Separacion {
   static const SizedBox grande = SizedBox(height: 24, width: 24);
 }
 
-class PantallaBase extends StatelessWidget {
+class PantallaBase extends ConsumerWidget {
   const PantallaBase({
     super.key,
     required this.titulo,
@@ -22,10 +24,82 @@ class PantallaBase extends StatelessWidget {
   final Widget? botonFlotante;
   final Widget? pie;
 
+  Widget? _construirIndicadorSync(BuildContext context, EstadoSync? sync) {
+    if (sync == null) return null;
+    final cs = Theme.of(context).colorScheme;
+
+    if (!sync.conectado) {
+      return Tooltip(
+        message: 'Modo sin conexión (los cambios se guardan localmente)',
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: cs.outlineVariant.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.cloud_off_outlined, size: 15, color: cs.outline),
+              const SizedBox(width: 4),
+              Text(
+                'Offline',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: cs.outline,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (sync.cambiosPendientes > 0) {
+      return Tooltip(
+        message:
+            '${sync.cambiosPendientes} cambio(s) pendiente(s) de sincronizar',
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: cs.secondaryContainer.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.sync, size: 15, color: cs.onSecondaryContainer),
+              const SizedBox(width: 4),
+              Text(
+                '${sync.cambiosPendientes}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: cs.onSecondaryContainer,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return null;
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sync = ref.watch(estadoSyncProvider).value;
+    final indicadorSync = _construirIndicadorSync(context, sync);
+
     return Scaffold(
-      appBar: AppBar(title: Text(titulo), actions: acciones),
+      appBar: AppBar(
+        title: Text(titulo),
+        actions: [?indicadorSync, ...acciones],
+      ),
       floatingActionButton: botonFlotante,
       bottomNavigationBar: pie,
       body: SafeArea(
@@ -86,11 +160,13 @@ class TarjetaSeccion extends StatelessWidget {
     super.key,
     this.titulo,
     this.accion,
+    this.icono,
     required this.children,
   });
 
   final String? titulo;
   final Widget? accion;
+  final IconData? icono;
   final List<Widget> children;
 
   @override
@@ -106,19 +182,31 @@ class TarjetaSeccion extends StatelessWidget {
             if (titulo != null || accion != null) ...[
               Row(
                 children: [
+                  if (icono != null) ...[
+                    Icon(icono, size: 20, color: tema.colorScheme.primary),
+                    const SizedBox(width: 8),
+                  ],
                   if (titulo != null)
                     Expanded(
                       child: Text(
                         titulo!,
                         style: tema.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
+                          color: tema.colorScheme.onSurface,
+                          letterSpacing: -0.2,
                         ),
                       ),
                     ),
                   ?accion,
                 ],
               ),
-              Separacion.chica,
+              const SizedBox(height: 12),
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: tema.colorScheme.outlineVariant.withValues(alpha: 0.4),
+              ),
+              const SizedBox(height: 12),
             ],
             ...children,
           ],

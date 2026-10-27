@@ -56,14 +56,78 @@ class _StockListaPantallaState extends ConsumerState<StockListaPantalla> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: FilterChip(
-              label: Text(etiquetaFiltro),
-              selected: _soloFaltantes,
-              onSelected: (seleccionado) {
-                setState(() => _soloFaltantes = seleccionado);
-              },
+            child: Row(
+              children: [
+                FilterChip(
+                  label: Text(etiquetaFiltro),
+                  selected: _soloFaltantes,
+                  avatar: _soloFaltantes
+                      ? const Icon(Icons.check, size: 16)
+                      : (cantidadFaltantes > 0
+                            ? const Icon(Icons.warning_amber_rounded, size: 16)
+                            : null),
+                  onSelected: (seleccionado) {
+                    setState(() => _soloFaltantes = seleccionado);
+                  },
+                ),
+              ],
             ),
           ),
+          if (cantidadFaltantes > 0 && !_soloFaltantes)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Material(
+                color: resolverColorEstado(context, ColorEstado.peligro).fondo,
+                borderRadius: BorderRadius.circular(12),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => setState(() => _soloFaltantes = true),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: resolverColorEstado(
+                            context,
+                            ColorEstado.peligro,
+                          ).frente,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            cantidadFaltantes == 1
+                                ? 'Hay 1 insumo bajo el stock mínimo'
+                                : 'Hay $cantidadFaltantes insumos bajo el stock mínimo',
+                            style: tema.textTheme.bodyMedium?.copyWith(
+                              color: resolverColorEstado(
+                                context,
+                                ColorEstado.peligro,
+                              ).frente,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          'Ver faltantes',
+                          style: tema.textTheme.labelMedium?.copyWith(
+                            color: resolverColorEstado(
+                              context,
+                              ColorEstado.peligro,
+                            ).frente,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           Expanded(
             child: ListaAsync<InsumoConStock>(
               valor: asyncInsumos,
@@ -81,100 +145,174 @@ class _StockListaPantallaState extends ConsumerState<StockListaPantalla> {
                 final tieneCategoria =
                     categoria != null && categoria.isNotEmpty;
                 final tieneMinimo = item.insumo.stockMinimo > 0;
+                final paletaPeligro = resolverColorEstado(
+                  context,
+                  ColorEstado.peligro,
+                );
 
+                final stockMinTexto = tieneMinimo
+                    ? 'Mínimo: ${item.insumo.unidad.formatear(item.insumo.stockMinimo)}'
+                    : 'Sin stock mínimo';
                 final partesSubtitulo = [
                   if (tieneCategoria) categoria,
-                  if (tieneMinimo)
-                    'Mínimo: ${item.insumo.unidad.formatear(item.insumo.stockMinimo)}',
+                  stockMinTexto,
                 ];
                 final subtitulo = partesSubtitulo.join(' • ');
 
-                return ListTile(
-                  title: Text(item.insumo.nombre),
-                  subtitle: subtitulo.isNotEmpty
-                      ? Text(
-                          subtitulo,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        )
-                      : null,
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          TextoCantidad(
-                            item.stock,
-                            item.insumo.unidad,
-                            estilo: tema.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
+                return Container(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: item.faltante
+                        ? paletaPeligro.fondo.withValues(alpha: 0.35)
+                        : tema.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: item.faltante
+                          ? paletaPeligro.fondo
+                          : tema.colorScheme.outlineVariant.withValues(
+                              alpha: 0.3,
                             ),
-                          ),
-                          if (item.faltante) ...[
-                            const SizedBox(height: 4),
-                            InsigniaEstado(
-                              texto:
-                                  'Falta ${item.insumo.unidad.formatear(item.cantidadFaltante)}',
-                              color: ColorEstado.peligro,
-                            ),
-                          ],
-                        ],
+                      width: 1,
+                    ),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 2,
+                    ),
+                    leading: CircleAvatar(
+                      backgroundColor: item.faltante
+                          ? paletaPeligro.fondo
+                          : tema.colorScheme.surfaceContainerHighest,
+                      foregroundColor: item.faltante
+                          ? paletaPeligro.frente
+                          : tema.colorScheme.onSurfaceVariant,
+                      child: Icon(
+                        item.faltante
+                            ? Icons.warning_amber_rounded
+                            : Icons.inventory_2_outlined,
+                        size: 20,
                       ),
-                      if (puedeCargar || puedeEditar)
-                        PopupMenuButton<String>(
-                          icon: const Icon(Icons.more_vert),
-                          tooltip: 'Más opciones',
-                          onSelected: (opcion) {
-                            if (opcion == 'ajustar') {
-                              mostrarDialogoAjusteStock(context, item);
-                            } else if (opcion == 'merma') {
-                              mostrarDialogoMerma(context, item);
-                            } else if (opcion == 'editar') {
-                              context.push(Rutas.insumoEditar(item.insumo.id));
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            if (puedeCargar) ...[
-                              const PopupMenuItem<String>(
-                                value: 'ajustar',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.tune),
-                                    SizedBox(width: 8),
-                                    Text('Ajustar por conteo'),
-                                  ],
-                                ),
+                    ),
+                    title: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            item.insumo.nombre,
+                            style: tema.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (item.faltante) ...[
+                          const SizedBox(width: 8),
+                          const InsigniaEstado(
+                            texto: 'Bajo mínimo',
+                            color: ColorEstado.peligro,
+                          ),
+                        ],
+                      ],
+                    ),
+                    subtitle: Text(
+                      subtitulo,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: tema.textTheme.bodySmall?.copyWith(
+                        color: item.faltante
+                            ? paletaPeligro.frente
+                            : tema.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            TextoCantidad(
+                              item.stock,
+                              item.insumo.unidad,
+                              estilo: tema.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: item.faltante
+                                    ? paletaPeligro.frente
+                                    : null,
                               ),
-                              const PopupMenuItem<String>(
-                                value: 'merma',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.remove_circle_outline),
-                                    SizedBox(width: 8),
-                                    Text('Registrar merma'),
-                                  ],
+                            ),
+                            if (item.faltante) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                'Falta ${item.insumo.unidad.formatear(item.cantidadFaltante)}',
+                                style: tema.textTheme.labelSmall?.copyWith(
+                                  color: paletaPeligro.frente,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ],
-                            if (puedeEditar)
-                              const PopupMenuItem<String>(
-                                value: 'editar',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.edit_outlined),
-                                    SizedBox(width: 8),
-                                    Text('Editar insumo'),
-                                  ],
-                                ),
-                              ),
                           ],
                         ),
-                    ],
+                        if (puedeCargar || puedeEditar)
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert),
+                            tooltip: 'Más opciones',
+                            onSelected: (opcion) {
+                              if (opcion == 'ajustar') {
+                                mostrarDialogoAjusteStock(context, item);
+                              } else if (opcion == 'merma') {
+                                mostrarDialogoMerma(context, item);
+                              } else if (opcion == 'editar') {
+                                context.push(
+                                  Rutas.insumoEditar(item.insumo.id),
+                                );
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              if (puedeCargar) ...[
+                                const PopupMenuItem<String>(
+                                  value: 'ajustar',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.tune),
+                                      SizedBox(width: 8),
+                                      Text('Ajustar por conteo'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuItem<String>(
+                                  value: 'merma',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.remove_circle_outline),
+                                      SizedBox(width: 8),
+                                      Text('Registrar merma'),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              if (puedeEditar)
+                                const PopupMenuItem<String>(
+                                  value: 'editar',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.edit_outlined),
+                                      SizedBox(width: 8),
+                                      Text('Editar insumo'),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                      ],
+                    ),
+                    onTap: () =>
+                        context.push(Rutas.stockMovimientos(item.insumo.id)),
                   ),
-                  onTap: () =>
-                      context.push(Rutas.stockMovimientos(item.insumo.id)),
                 );
               },
             ),

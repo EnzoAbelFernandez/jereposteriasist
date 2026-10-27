@@ -148,25 +148,34 @@ class _CajaPantallaState extends ConsumerState<CajaPantalla> {
             onSiguiente: _mesSiguiente,
             onElegirRango: _elegirRangoFechas,
           ),
-          ChipsFiltro<TipoMovimientoCaja>(
-            opciones: TipoMovimientoCaja.values,
-            seleccionados: _tipo != null ? {_tipo!} : const {},
-            etiqueta: (t) => t.etiqueta,
-            multiple: false,
-            onChanged: (sel) =>
-                setState(() => _tipo = sel.isEmpty ? null : sel.first),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                ChipsFiltro<TipoMovimientoCaja>(
+                  opciones: TipoMovimientoCaja.values,
+                  seleccionados: _tipo != null ? {_tipo!} : const {},
+                  etiqueta: (t) => t.etiqueta,
+                  multiple: false,
+                  onChanged: (sel) =>
+                      setState(() => _tipo = sel.isEmpty ? null : sel.first),
+                ),
+                ChipsFiltro<MedioPago>(
+                  opciones: MedioPago.values,
+                  seleccionados: _medio != null ? {_medio!} : const {},
+                  etiqueta: (m) => m.etiqueta,
+                  multiple: false,
+                  onChanged: (sel) =>
+                      setState(() => _medio = sel.isEmpty ? null : sel.first),
+                ),
+              ],
+            ),
           ),
-          ChipsFiltro<MedioPago>(
-            opciones: MedioPago.values,
-            seleccionados: _medio != null ? {_medio!} : const {},
-            etiqueta: (m) => m.etiqueta,
-            multiple: false,
-            onChanged: (sel) =>
-                setState(() => _medio = sel.isEmpty ? null : sel.first),
-          ),
+          Separacion.chica,
           Expanded(
             child: ListaAsync<MovimientoCaja>(
               valor: asyncMovimientos,
+              separadores: false,
               encabezado: VistaAsync<ResumenCaja>(
                 valor: asyncResumen,
                 builder: (context, resumen) =>
@@ -186,54 +195,205 @@ class _CajaPantallaState extends ConsumerState<CajaPantalla> {
                   onTap = () => context.push(Rutas.gastos);
                 }
 
-                return ListTile(
-                  title: Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          m.descripcionTexto,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (m.anulado) ...[
-                        Separacion.chica,
-                        const InsigniaEstado(
-                          texto: 'Anulado',
-                          color: ColorEstado.neutro,
-                        ),
-                      ],
-                    ],
+                final tema = Theme.of(context);
+                final esIngreso = m.tipo == TipoMovimientoCaja.ingreso;
+                final paleta = m.anulado
+                    ? resolverColorEstado(context, ColorEstado.neutro)
+                    : resolverColorEstado(
+                        context,
+                        esIngreso ? ColorEstado.exito : ColorEstado.peligro,
+                      );
+
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
                   ),
-                  subtitle: Text(
-                    '${formatearFechaHora(m.fecha)} · ${m.medioPago.etiqueta} · ${m.concepto.etiqueta}',
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextoDinero(
-                        m.montoConSigno,
-                        colorear: true,
-                        conSigno: true,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: tema.colorScheme.outlineVariant.withValues(
+                        alpha: 0.5,
                       ),
-                      if (m.anulable) ...[
-                        Separacion.chica,
-                        RequierePermiso(
-                          modulo: Modulo.caja,
-                          nivel: NivelPermiso.editar,
-                          child: IconButton(
-                            icon: const Icon(Icons.undo),
-                            tooltip: 'Anular movimiento',
-                            onPressed: () => _confirmarYAnular(context, ref, m),
+                    ),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: onTap,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: paleta.fondo,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              m.anulado
+                                  ? Icons.block_outlined
+                                  : (esIngreso
+                                        ? Icons.arrow_downward
+                                        : Icons.arrow_upward),
+                              color: paleta.frente,
+                              size: 20,
+                            ),
                           ),
-                        ),
-                      ] else if (onTap != null) ...[
-                        Separacion.chica,
-                        const Icon(Icons.chevron_right),
-                      ],
-                    ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        m.descripcionTexto,
+                                        style: tema.textTheme.bodyMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                              decoration: m.anulado
+                                                  ? TextDecoration.lineThrough
+                                                  : null,
+                                            ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (m.anulado) ...[
+                                      Separacion.chica,
+                                      const InsigniaEstado(
+                                        texto: 'Anulado',
+                                        color: ColorEstado.neutro,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 2,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Text(
+                                      formatearFechaHora(m.fecha),
+                                      style: tema.textTheme.bodySmall?.copyWith(
+                                        color:
+                                            tema.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                    Text(
+                                      '•',
+                                      style: tema.textTheme.bodySmall?.copyWith(
+                                        color: tema.colorScheme.outlineVariant,
+                                      ),
+                                    ),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          m.medioPago.icono,
+                                          size: 14,
+                                          color:
+                                              tema.colorScheme.onSurfaceVariant,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          m.medioPago.etiqueta,
+                                          style: tema.textTheme.bodySmall
+                                              ?.copyWith(
+                                                color: tema
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      '•',
+                                      style: tema.textTheme.bodySmall?.copyWith(
+                                        color: tema.colorScheme.outlineVariant,
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 1,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: tema
+                                            .colorScheme
+                                            .surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        m.concepto.etiqueta,
+                                        style: tema.textTheme.labelSmall
+                                            ?.copyWith(
+                                              fontSize: 10,
+                                              color: tema
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              TextoDinero(
+                                m.montoConSigno,
+                                colorear: !m.anulado,
+                                conSigno: true,
+                                estilo: tema.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              if (m.anulable) ...[
+                                const SizedBox(height: 2),
+                                RequierePermiso(
+                                  modulo: Modulo.caja,
+                                  nivel: NivelPermiso.editar,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(4),
+                                    onTap: () =>
+                                        _confirmarYAnular(context, ref, m),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(4),
+                                      child: Icon(
+                                        Icons.undo,
+                                        size: 18,
+                                        color:
+                                            tema.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ] else if (onTap != null) ...[
+                                const SizedBox(height: 2),
+                                Icon(
+                                  Icons.chevron_right,
+                                  size: 18,
+                                  color: tema.colorScheme.outlineVariant,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  onTap: onTap,
                 );
               },
             ),
@@ -274,41 +434,68 @@ class _BarraPeriodo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tema = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.chevron_left),
-            tooltip: 'Mes anterior',
-            onPressed: onAnterior,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Container(
+        decoration: BoxDecoration(
+          color: tema.colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.35,
           ),
-          InkWell(
-            borderRadius: BorderRadius.circular(8),
-            onTap: onElegirRango,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.calendar_today_outlined, size: 18),
-                  Separacion.chica,
-                  Text(
-                    _textoPeriodo,
-                    style: Theme.of(context).textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                ],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: tema.colorScheme.outlineVariant.withValues(alpha: 0.4),
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.chevron_left),
+              tooltip: 'Mes anterior',
+              onPressed: onAnterior,
+            ),
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: onElegirRango,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.calendar_today_outlined,
+                      size: 16,
+                      color: tema.colorScheme.primary,
+                    ),
+                    Separacion.chica,
+                    Text(
+                      _textoPeriodo,
+                      style: tema.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.arrow_drop_down,
+                      size: 18,
+                      color: tema.colorScheme.onSurfaceVariant,
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.chevron_right),
-            tooltip: 'Mes siguiente',
-            onPressed: onSiguiente,
-          ),
-        ],
+            IconButton(
+              icon: const Icon(Icons.chevron_right),
+              tooltip: 'Mes siguiente',
+              onPressed: onSiguiente,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -321,6 +508,7 @@ class _EncabezadoResumen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tema = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Column(
@@ -342,9 +530,13 @@ class _EncabezadoResumen extends StatelessWidget {
                   icono: Icons.arrow_upward,
                 ),
                 TarjetaMetrica(
-                  titulo: 'Saldo',
+                  titulo: 'Saldo neto',
                   valor: resumen.saldo.formatear(),
-                  color: ColorEstado.neutro,
+                  color: resumen.saldo.esNegativo
+                      ? ColorEstado.peligro
+                      : (resumen.saldo.esPositivo
+                            ? ColorEstado.exito
+                            : ColorEstado.neutro),
                   icono: Icons.account_balance_wallet_outlined,
                 ),
               ];
@@ -372,61 +564,121 @@ class _EncabezadoResumen extends StatelessWidget {
           ),
           Separacion.chica,
           Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: tema.colorScheme.outlineVariant.withValues(alpha: 0.5),
+              ),
+            ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final items = [
-                    for (final medio in MedioPago.values)
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            medio.icono,
-                            size: 18,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
-                          ),
-                          Separacion.chica,
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                medio.etiqueta,
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant,
-                                    ),
-                              ),
-                              TextoDinero(
-                                resumen.saldoPorMedio[medio] ?? Dinero.cero,
-                                estilo: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(fontWeight: FontWeight.w600),
-                              ),
-                            ],
-                          ),
-                        ],
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.pie_chart_outline,
+                        size: 16,
+                        color: tema.colorScheme.primary,
                       ),
-                  ];
+                      const SizedBox(width: 8),
+                      Text(
+                        'Desglose por medio de pago',
+                        style: tema.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: tema.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final items = [
+                        for (final medio in MedioPago.values)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: tema.colorScheme.surfaceContainerHighest
+                                  .withValues(alpha: 0.4),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: tema.colorScheme.surface,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    medio.icono,
+                                    size: 18,
+                                    color: tema.colorScheme.primary,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      medio.etiqueta,
+                                      style: tema.textTheme.labelSmall
+                                          ?.copyWith(
+                                            color: tema
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    TextoDinero(
+                                      resumen.saldoPorMedio[medio] ??
+                                          Dinero.cero,
+                                      estilo: tema.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                      ];
 
-                  if (constraints.maxWidth < 450) {
-                    return Wrap(
-                      spacing: 16,
-                      runSpacing: 10,
-                      alignment: WrapAlignment.spaceAround,
-                      children: items,
-                    );
-                  }
+                      if (constraints.maxWidth < 500) {
+                        return Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: items
+                              .map(
+                                (item) => SizedBox(
+                                  width: (constraints.maxWidth - 24) / 2,
+                                  child: item,
+                                ),
+                              )
+                              .toList(),
+                        );
+                      }
 
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: items,
-                  );
-                },
+                      return Row(
+                        children: [
+                          for (var i = 0; i < items.length; i++) ...[
+                            if (i > 0) const SizedBox(width: 8),
+                            Expanded(child: items[i]),
+                          ],
+                        ],
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
           ),

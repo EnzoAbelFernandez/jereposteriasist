@@ -105,7 +105,8 @@ class CompraDetallePantalla extends ConsumerWidget {
                   ),
                 ),
               TarjetaSeccion(
-                titulo: 'Datos',
+                titulo: 'Datos de la compra',
+                icono: Icons.receipt_long_outlined,
                 children: [
                   FilaDato(
                     etiqueta: 'Fecha',
@@ -124,6 +125,11 @@ class CompraDetallePantalla extends ConsumerWidget {
                     icono: d.compra.medioPago.icono,
                   ),
                   FilaDato(
+                    etiqueta: 'Total pagado',
+                    valor: d.total.formatear(),
+                    icono: Icons.payments_outlined,
+                  ),
+                  FilaDato(
                     etiqueta: 'Cargada por',
                     valor: d.creadoPorNombre,
                     icono: Icons.person_outline,
@@ -136,7 +142,8 @@ class CompraDetallePantalla extends ConsumerWidget {
                 ],
               ),
               TarjetaSeccion(
-                titulo: 'Insumos comprados',
+                titulo: 'Desglose de insumos',
+                icono: Icons.shopping_basket_outlined,
                 children: [
                   if (d.items.isEmpty)
                     const Padding(
@@ -148,9 +155,29 @@ class CompraDetallePantalla extends ConsumerWidget {
                       if (i > 0) const Divider(height: 1),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: Text(d.items[i].insumoNombre),
-                        subtitle: Text(d.items[i].cantidadTexto),
-                        trailing: TextoDinero(d.items[i].item.precioTotal),
+                        leading: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          foregroundColor: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant,
+                          child: const Icon(
+                            Icons.inventory_2_outlined,
+                            size: 18,
+                          ),
+                        ),
+                        title: Text(
+                          d.items[i].insumoNombre,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Text('Cantidad: ${d.items[i].cantidadTexto}'),
+                        trailing: TextoDinero(
+                          d.items[i].item.precioTotal,
+                          estilo: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ],
                   const Divider(height: 24),
@@ -160,14 +187,17 @@ class CompraDetallePantalla extends ConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Total',
+                          'Total de la compra',
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         TextoDinero(
                           d.total,
-                          estilo: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
+                          estilo: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                         ),
                       ],
                     ),

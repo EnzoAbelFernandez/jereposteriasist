@@ -60,28 +60,99 @@ class _ComprasListaPantallaState extends ConsumerState<ComprasListaPantalla> {
           mensaje: 'No hay compras registradas',
         ),
         itemBuilder: (context, r) {
+          final tema = Theme.of(context);
           final subtitulo =
               '${formatearFecha(r.compra.fecha)} · ${r.cantidadItems} ítem(s) · ${r.compra.medioPago.etiqueta}';
 
-          return ListTile(
-            title: Text(r.proveedorNombre ?? 'Compra sin proveedor'),
-            subtitle: Text(subtitulo),
-            trailing: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TextoDinero(r.total),
-                if (r.compra.anulada) ...[
-                  const SizedBox(height: 4),
-                  const InsigniaEstado(
-                    texto: 'Anulada',
-                    color: ColorEstado.peligro,
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: r.compra.anulada
+                  ? tema.colorScheme.surfaceContainerLowest
+                  : tema.colorScheme.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: r.compra.anulada
+                    ? resolverColorEstado(
+                        context,
+                        ColorEstado.peligro,
+                      ).fondo.withValues(alpha: 0.5)
+                    : tema.colorScheme.outlineVariant.withValues(alpha: 0.35),
+                width: 1,
+              ),
+            ),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 4,
+              ),
+              leading: CircleAvatar(
+                backgroundColor: r.compra.anulada
+                    ? resolverColorEstado(context, ColorEstado.peligro).fondo
+                    : tema.colorScheme.primaryContainer,
+                foregroundColor: r.compra.anulada
+                    ? resolverColorEstado(context, ColorEstado.peligro).frente
+                    : tema.colorScheme.onPrimaryContainer,
+                child: Icon(
+                  r.compra.anulada
+                      ? Icons.block_outlined
+                      : r.compra.medioPago.icono,
+                  size: 20,
+                ),
+              ),
+              title: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      r.proveedorNombre ?? 'Compra sin proveedor',
+                      style: tema.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        decoration: r.compra.anulada
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
-              ],
+              ),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  subtitulo,
+                  style: tema.textTheme.bodySmall?.copyWith(
+                    color: tema.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              trailing: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextoDinero(
+                    r.total,
+                    estilo: tema.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      decoration: r.compra.anulada
+                          ? TextDecoration.lineThrough
+                          : null,
+                      color: r.compra.anulada ? tema.colorScheme.outline : null,
+                    ),
+                  ),
+                  if (r.compra.anulada) ...[
+                    const SizedBox(height: 4),
+                    const InsigniaEstado(
+                      texto: 'Anulada',
+                      color: ColorEstado.peligro,
+                      icono: Icons.cancel_outlined,
+                    ),
+                  ],
+                ],
+              ),
+              onTap: () => context.push(Rutas.compra(r.compra.id)),
             ),
-            onTap: () => context.push(Rutas.compra(r.compra.id)),
           );
         },
       ),

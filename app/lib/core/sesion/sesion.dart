@@ -105,6 +105,7 @@ class SesionController {
             user.id,
             () => {for (final m in Modulo.values) m: NivelPermiso.editar},
           );
+          _almacen.conectadoAInternet = true;
           _almacen.usuarioActualId = user.id;
           return;
         }
@@ -116,6 +117,7 @@ class SesionController {
         );
       } catch (_) {
         // Si falla la conexión de red, continúa en el almacén local.
+        _almacen.conectadoAInternet = false;
       }
     }
     _almacen.usuarioActualId = AlmacenLocal.idJefeLocal;

@@ -12,26 +12,99 @@ class InicioPantalla extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final perfil = ref.watch(perfilActualProvider).asData?.value;
     final nombre = perfil?.nombre.trim();
-    final titulo = (nombre != null && nombre.isNotEmpty)
-        ? 'Hola, $nombre'
-        : 'Hola';
 
     return PantallaBase(
-      titulo: titulo,
+      titulo: 'Inicio',
       cuerpo: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: const [
-            _MetricasRapidas(),
+          children: [
+            _EncabezadoBienvenida(nombre: nombre),
             Separacion.media,
-            _SeccionEntregasHoyMananaProtegida(),
-            _SeccionProximosCumpleanosProtegida(),
-            _SeccionMisTareas(),
-            _SeccionInsumosFaltaProtegida(),
+            const _MetricasRapidas(),
+            Separacion.media,
+            const _SeccionEntregasHoyMananaProtegida(),
+            const _SeccionProximosCumpleanosProtegida(),
+            const _SeccionMisTareas(),
+            const _SeccionInsumosFaltaProtegida(),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// ENCABEZADO DE BIENVENIDA
+// =============================================================================
+
+class _EncabezadoBienvenida extends StatelessWidget {
+  const _EncabezadoBienvenida({this.nombre});
+
+  final String? nombre;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final cs = tema.colorScheme;
+    final ahora = DateTime.now();
+    final diaSemana = formatearDiaSemana(ahora);
+    final diaSemanaCap = diaSemana.isNotEmpty
+        ? '${diaSemana[0].toUpperCase()}${diaSemana.substring(1)}'
+        : '';
+    final fechaTexto =
+        '$diaSemanaCap, ${formatearDiaMesLargo(ahora.day, ahora.month)} de ${ahora.year}';
+    final saludo = (nombre != null && nombre!.isNotEmpty)
+        ? '¡Hola, $nombre!'
+        : '¡Te damos la bienvenida!';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: cs.primaryContainer,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.bakery_dining,
+              color: cs.onPrimaryContainer,
+              size: 26,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  saludo,
+                  style: tema.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: cs.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  fechaTexto,
+                  style: tema.textTheme.bodyMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -56,8 +129,17 @@ class _MetricasRapidas extends ConsumerWidget {
     final puedeCaja = permisos.puede(Modulo.caja, NivelPermiso.ver);
 
     final tarjetas = <Widget>[
-      const _TarjetaMisTareas(),
-      if (puedePedidos)
+      if (puedePedidos) ...[
+        RequierePermiso(
+          modulo: Modulo.pedidos,
+          nivel: NivelPermiso.ver,
+          alternativa: RequierePermiso(
+            modulo: Modulo.produccion,
+            nivel: NivelPermiso.ver,
+            child: const _TarjetaPedidosPendientes(),
+          ),
+          child: const _TarjetaPedidosPendientes(),
+        ),
         RequierePermiso(
           modulo: Modulo.pedidos,
           nivel: NivelPermiso.ver,
@@ -68,6 +150,7 @@ class _MetricasRapidas extends ConsumerWidget {
           ),
           child: const _TarjetaEntregasHoy(),
         ),
+      ],
       if (puedeStock)
         RequierePermiso(
           modulo: Modulo.stock,
@@ -79,6 +162,7 @@ class _MetricasRapidas extends ConsumerWidget {
           ),
           child: const _TarjetaInsumosFalta(),
         ),
+      const _TarjetaMisTareas(),
       if (puedeCaja)
         RequierePermiso(
           modulo: Modulo.caja,
@@ -100,7 +184,7 @@ class _MetricasRapidas extends ConsumerWidget {
           );
         }
 
-        if (constraints.maxWidth < 900 && tarjetas.length > 2) {
+        if (constraints.maxWidth < 960 && tarjetas.length > 2) {
           final mitad = (tarjetas.length / 2).ceil();
           final fila1 = tarjetas.sublist(0, mitad);
           final fila2 = tarjetas.sublist(mitad);
@@ -144,22 +228,23 @@ class _MetricasRapidas extends ConsumerWidget {
   }
 }
 
-class _TarjetaMisTareas extends ConsumerWidget {
-  const _TarjetaMisTareas();
+class _TarjetaPedidosPendientes extends ConsumerWidget {
+  const _TarjetaPedidosPendientes();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncCantidad = ref.watch(cantidadTareasPendientesProvider);
-    final valor = asyncCantidad.maybeWhen(
-      data: (cant) => '$cant',
+    final asyncPedidos = ref.watch(pedidosProvider(FiltroPedidos.activos));
+    final valor = asyncPedidos.maybeWhen(
+      data: (pedidos) => '${pedidos.length}',
       orElse: () => '...',
     );
 
     return TarjetaMetrica(
-      titulo: 'Mis tareas pendientes',
+      titulo: 'Pedidos pendientes',
       valor: valor,
-      icono: Icons.checklist_outlined,
-      onTap: () => context.push(Rutas.tareas),
+      icono: Icons.receipt_long_outlined,
+      color: ColorEstado.advertencia,
+      onTap: () => context.push(Rutas.pedidos),
     );
   }
 }
@@ -194,6 +279,7 @@ class _TarjetaEntregasHoy extends ConsumerWidget {
       titulo: 'Entregas de hoy',
       valor: valor,
       icono: Icons.local_shipping_outlined,
+      color: ColorEstado.info,
       onTap: () => context.push(Rutas.pedidos),
     );
   }
@@ -221,6 +307,27 @@ class _TarjetaInsumosFalta extends ConsumerWidget {
   }
 }
 
+class _TarjetaMisTareas extends ConsumerWidget {
+  const _TarjetaMisTareas();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncCantidad = ref.watch(cantidadTareasPendientesProvider);
+    final valor = asyncCantidad.maybeWhen(
+      data: (cant) => '$cant',
+      orElse: () => '...',
+    );
+
+    return TarjetaMetrica(
+      titulo: 'Tareas pendientes',
+      valor: valor,
+      icono: Icons.checklist_outlined,
+      color: ColorEstado.exito,
+      onTap: () => context.push(Rutas.tareas),
+    );
+  }
+}
+
 class _TarjetaSaldoMes extends ConsumerWidget {
   const _TarjetaSaldoMes();
 
@@ -241,6 +348,44 @@ class _TarjetaSaldoMes extends ConsumerWidget {
           ? ColorEstado.peligro
           : ColorEstado.neutro,
       onTap: () => context.push(Rutas.caja),
+    );
+  }
+}
+
+// =============================================================================
+// ESTADO VACÍO EN SECCIONES
+// =============================================================================
+
+class _EstadoVacioSeccion extends StatelessWidget {
+  const _EstadoVacioSeccion({required this.icono, required this.mensaje});
+
+  final IconData icono;
+  final String mensaje;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icono,
+              size: 32,
+              color: cs.onSurfaceVariant.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              mensaje,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: cs.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -289,7 +434,8 @@ class _SeccionEntregasHoyManana extends ConsumerWidget {
     );
 
     return TarjetaSeccion(
-      titulo: 'Entregas de hoy y mañana',
+      titulo: 'Entregas del día y mañana',
+      icono: Icons.local_shipping_outlined,
       accion: TextButton.icon(
         onPressed: () => context.push(Rutas.pedidosCalendario),
         icon: const Icon(Icons.calendar_month_outlined, size: 18),
@@ -315,9 +461,9 @@ class _SeccionEntregasHoyManana extends ConsumerWidget {
                 .toList();
 
             if (filtrados.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text('No hay entregas programadas para hoy ni mañana'),
+              return const _EstadoVacioSeccion(
+                icono: Icons.event_available_outlined,
+                mensaje: 'No hay entregas programadas para hoy ni mañana',
               );
             }
 
@@ -348,21 +494,67 @@ class _ItemEntrega extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
+    final cs = tema.colorScheme;
     final p = pedidoResumen;
     final esHoy = esMismoDia(p.pedido.fechaEntrega, inicioHoy);
     final dia = esHoy ? 'Hoy' : 'Mañana';
     final hora = formatearHora(p.pedido.fechaEntrega);
 
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Avatar(p.clienteNombre),
-      title: Text(
-        p.clienteNombre,
-        style: tema.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-      ),
-      subtitle: Text('$dia a las $hora · ${p.pedido.tipoEntrega.etiqueta}'),
-      trailing: InsigniaEstadoPedido(p.pedido.estado),
+    final detallePedido = p.primerItem != null
+        ? '${p.pedido.numeroTexto} · ${p.primerItem}${p.cantidadItems > 1 ? ' (+${p.cantidadItems - 1})' : ''}'
+        : p.pedido.numeroTexto;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
       onTap: () => context.push(Rutas.pedido(p.pedido.id)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Row(
+          children: [
+            Avatar(p.clienteNombre),
+            Separacion.media,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          p.clienteNombre,
+                          style: tema.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '$dia · $hora',
+                        style: tema.textTheme.bodySmall?.copyWith(
+                          color: cs.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '$detallePedido · ${p.pedido.tipoEntrega.etiqueta}',
+                    style: tema.textTheme.bodyMedium?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            InsigniaEstadoPedido(p.pedido.estado),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -400,6 +592,7 @@ class _SeccionProximosCumpleanos extends ConsumerWidget {
 
     return TarjetaSeccion(
       titulo: 'Próximos cumpleaños',
+      icono: Icons.cake_outlined,
       children: [
         asyncCumpleanos.when(
           loading: () => const Padding(
@@ -415,9 +608,9 @@ class _SeccionProximosCumpleanos extends ConsumerWidget {
           ),
           data: (cumpleanos) {
             if (cumpleanos.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text('No hay cumpleaños en los próximos días'),
+              return const _EstadoVacioSeccion(
+                icono: Icons.cake_outlined,
+                mensaje: 'No hay cumpleaños en los próximos días',
               );
             }
 
@@ -452,83 +645,90 @@ class _ItemCumpleanos extends StatelessWidget {
     final tel = c.cliente.telefono?.trim();
     final tieneTelefono = tel != null && tel.isNotEmpty;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final anchoEstrecho = constraints.maxWidth < 480;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => context.push(Rutas.cliente(c.cliente.id)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final anchoEstrecho = constraints.maxWidth < 480;
 
-          final infoCliente = Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Avatar(c.cliente.nombre),
-              Separacion.media,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            c.cliente.nombre,
-                            style: tema.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (c.cliente.esHabitual) ...[
-                          Separacion.chica,
-                          const InsigniaHabitual(),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      textoDias,
-                      style: tema.textTheme.bodyMedium?.copyWith(
-                        color: tema.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-
-          final botonWhatsApp = tieneTelefono
-              ? TextButton.icon(
-                  onPressed: () => abrirWhatsApp(
-                    tel,
-                    mensaje:
-                        '¡Hola ${c.cliente.nombre}! Se acerca tu cumpleaños y queremos regalarte un descuento especial en tu próximo pedido 🎂',
-                  ),
-                  icon: const Icon(Icons.chat_outlined, size: 18),
-                  label: const Text('Enviar saludo / descuento'),
-                )
-              : null;
-
-          if (anchoEstrecho) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            final infoCliente = Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                infoCliente,
-                if (botonWhatsApp != null) ...[
-                  const SizedBox(height: 4),
-                  Align(alignment: Alignment.centerRight, child: botonWhatsApp),
-                ],
+                Avatar(c.cliente.nombre),
+                Separacion.media,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              c.cliente.nombre,
+                              style: tema.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (c.cliente.esHabitual) ...[
+                            Separacion.chica,
+                            const InsigniaHabitual(),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        textoDias,
+                        style: tema.textTheme.bodyMedium?.copyWith(
+                          color: tema.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             );
-          }
 
-          return Row(
-            children: [
-              Expanded(child: infoCliente),
-              if (botonWhatsApp != null) ...[Separacion.chica, botonWhatsApp],
-            ],
-          );
-        },
+            final botonWhatsApp = tieneTelefono
+                ? TextButton.icon(
+                    onPressed: () => abrirWhatsApp(
+                      tel,
+                      mensaje:
+                          '¡Hola ${c.cliente.nombre}! Se acerca tu cumpleaños y queremos regalarte un descuento especial en tu próximo pedido 🎂',
+                    ),
+                    icon: const Icon(Icons.chat_outlined, size: 18),
+                    label: const Text('Saludar por WhatsApp'),
+                  )
+                : null;
+
+            if (anchoEstrecho) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  infoCliente,
+                  if (botonWhatsApp != null) ...[
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: botonWhatsApp,
+                    ),
+                  ],
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(child: infoCliente),
+                if (botonWhatsApp != null) ...[Separacion.chica, botonWhatsApp],
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -547,7 +747,8 @@ class _SeccionMisTareas extends ConsumerWidget {
     final asyncTareas = ref.watch(misTareasProvider(false));
 
     return TarjetaSeccion(
-      titulo: 'Mis tareas pendientes',
+      titulo: 'Tareas pendientes prioritarias',
+      icono: Icons.checklist_outlined,
       accion: TextButton(
         onPressed: () => context.push(Rutas.tareas),
         child: const Text('Ver todas'),
@@ -566,11 +767,43 @@ class _SeccionMisTareas extends ConsumerWidget {
             ),
           ),
           data: (tareas) {
-            final items = tareas.take(5).toList();
+            final ahora = DateTime.now();
+            final ordenadas =
+                tareas
+                    .where((t) => t.tarea.estado == EstadoTarea.pendiente)
+                    .toList()
+                  ..sort((a, b) {
+                    final aVencida = a.tarea.vencida(ahora);
+                    final bVencida = b.tarea.vencida(ahora);
+                    if (aVencida && !bVencida) return -1;
+                    if (!aVencida && bVencida) return 1;
+
+                    if (a.tarea.prioridad == PrioridadTarea.alta &&
+                        b.tarea.prioridad != PrioridadTarea.alta) {
+                      return -1;
+                    }
+                    if (a.tarea.prioridad != PrioridadTarea.alta &&
+                        b.tarea.prioridad == PrioridadTarea.alta) {
+                      return 1;
+                    }
+
+                    if (a.tarea.fechaVencimiento != null &&
+                        b.tarea.fechaVencimiento != null) {
+                      return a.tarea.fechaVencimiento!.compareTo(
+                        b.tarea.fechaVencimiento!,
+                      );
+                    }
+                    if (a.tarea.fechaVencimiento != null) return -1;
+                    if (b.tarea.fechaVencimiento != null) return 1;
+
+                    return 0;
+                  });
+
+            final items = ordenadas.take(5).toList();
             if (items.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text('No tenés tareas pendientes'),
+              return const _EstadoVacioSeccion(
+                icono: Icons.task_alt_outlined,
+                mensaje: 'No tenés tareas pendientes',
               );
             }
 
@@ -659,7 +892,7 @@ class _ItemTarea extends ConsumerWidget {
 }
 
 // =============================================================================
-// SECCIÓN: INSUMOS EN FALTA
+// SECCIÓN: STOCK BAJO / FALTANTES CRÍTICOS
 // =============================================================================
 
 class _SeccionInsumosFaltaProtegida extends StatelessWidget {
@@ -689,37 +922,51 @@ class _SeccionInsumosFalta extends ConsumerWidget {
       insumosConStockProvider(const FiltroStock(soloFaltantes: true)),
     );
 
-    return asyncInsumos.maybeWhen(
-      data: (items) {
-        final faltantes = items.where((i) => i.faltante).take(5).toList();
-        if (faltantes.isEmpty) {
-          return const SizedBox.shrink();
-        }
-
-        return TarjetaSeccion(
-          titulo: 'Insumos en falta',
-          accion: RequierePermiso(
-            modulo: Modulo.compras,
-            nivel: NivelPermiso.cargar,
-            child: TextButton.icon(
-              onPressed: () => context.push(Rutas.compraNueva),
-              icon: const Icon(Icons.add_shopping_cart, size: 18),
-              label: const Text('Registrar compra'),
+    return TarjetaSeccion(
+      titulo: 'Stock bajo y faltantes',
+      icono: Icons.inventory_2_outlined,
+      accion: RequierePermiso(
+        modulo: Modulo.compras,
+        nivel: NivelPermiso.cargar,
+        child: TextButton.icon(
+          onPressed: () => context.push(Rutas.compraNueva),
+          icon: const Icon(Icons.add_shopping_cart, size: 18),
+          label: const Text('Registrar compra'),
+        ),
+      ),
+      children: [
+        asyncInsumos.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (err, _) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              'No se pudo cargar el stock',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
-          children: [
-            Column(
+          data: (items) {
+            final faltantes = items.where((i) => i.faltante).take(5).toList();
+            if (faltantes.isEmpty) {
+              return const _EstadoVacioSeccion(
+                icono: Icons.check_circle_outline,
+                mensaje: 'El stock está al día, no hay faltantes',
+              );
+            }
+
+            return Column(
               children: [
                 for (var i = 0; i < faltantes.length; i++) ...[
                   if (i > 0) const Divider(height: 1),
                   _ItemInsumoFaltante(item: faltantes[i]),
                 ],
               ],
-            ),
-          ],
-        );
-      },
-      orElse: () => const SizedBox.shrink(),
+            );
+          },
+        ),
+      ],
     );
   }
 }

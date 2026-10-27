@@ -69,30 +69,164 @@ class _ProductosListaPantallaState
                 icono: Icons.cake_outlined,
                 mensaje: 'Todavía no hay productos en el catálogo',
               ),
-              itemBuilder: (context, p) {
-                final desc = p.descripcion?.trim();
-                final textoSubtitulo = (desc != null && desc.isNotEmpty)
-                    ? '${p.categoria.etiqueta} • $desc'
-                    : p.categoria.etiqueta;
-
-                return ListTile(
-                  title: Text(p.nombre),
-                  subtitle: Text(
-                    textoSubtitulo,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: p.precioBase != null
-                      ? TextoDinero(p.precioBase!)
-                      : null,
-                  onTap: puedeEditar
-                      ? () => context.push(Rutas.productoEditar(p.id))
-                      : null,
-                );
-              },
+              itemBuilder: (context, p) =>
+                  _ProductoTile(producto: p, puedeEditar: puedeEditar),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ProductoTile extends ConsumerWidget {
+  const _ProductoTile({required this.producto, required this.puedeEditar});
+
+  final Producto producto;
+  final bool puedeEditar;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tema = Theme.of(context);
+    final asyncCosto = ref.watch(costoProductoProvider(producto.id));
+    final costo = asyncCosto.asData?.value;
+
+    final desc = producto.descripcion?.trim();
+    final textoSubtitulo = (desc != null && desc.isNotEmpty)
+        ? '${producto.categoria.etiqueta} • $desc'
+        : producto.categoria.etiqueta;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(
+          color: tema.colorScheme.outlineVariant.withValues(alpha: 0.4),
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: puedeEditar
+            ? () => context.push(Rutas.productoEditar(producto.id))
+            : null,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: tema.colorScheme.primaryContainer,
+                    foregroundColor: tema.colorScheme.onPrimaryContainer,
+                    child: const Icon(Icons.cake_outlined, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          producto.nombre,
+                          style: tema.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          textoSubtitulo,
+                          style: tema.textTheme.bodySmall?.copyWith(
+                            color: tema.colorScheme.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (producto.precioBase != null)
+                        TextoDinero(
+                          producto.precioBase!,
+                          estilo: tema.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: tema.colorScheme.primary,
+                          ),
+                        )
+                      else
+                        Text(
+                          'Sin precio',
+                          style: tema.textTheme.bodySmall?.copyWith(
+                            color: tema.colorScheme.outline,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+              if (costo != null) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: tema.colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.45,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.menu_book_outlined,
+                            size: 15,
+                            color: tema.colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Costo receta: ${costo.costoUnitario.formatear()}',
+                            style: tema.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (costo.margenPorcentaje != null)
+                        InsigniaEstado(
+                          texto: 'Margen ${costo.margenPorcentaje}%',
+                          color: costo.margenPorcentaje! >= 60
+                              ? ColorEstado.exito
+                              : (costo.margenPorcentaje! >= 40
+                                    ? ColorEstado.advertencia
+                                    : ColorEstado.peligro),
+                        )
+                      else if (!costo.tieneCostoCompleto)
+                        Text(
+                          'Costo parcial',
+                          style: tema.textTheme.labelSmall?.copyWith(
+                            color: tema.colorScheme.outline,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

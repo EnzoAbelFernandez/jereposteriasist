@@ -80,6 +80,50 @@ class _ProveedorFormularioPantallaState
     return FormularioResponsivo(
       formKey: _formKey,
       campos: [
+        if (widget.esEdicion && _nombre.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                Avatar(_nombre, radio: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _nombre,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      if (_telefono.isNotEmpty)
+                        Text(
+                          _telefono,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (_telefono.trim().isNotEmpty) ...[
+                  IconButton(
+                    icon: const Icon(Icons.chat_outlined),
+                    tooltip: 'WhatsApp',
+                    onPressed: () => abrirWhatsApp(_telefono),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.phone_outlined),
+                    tooltip: 'Llamar',
+                    onPressed: () => llamar(_telefono),
+                  ),
+                ],
+              ],
+            ),
+          ),
         CampoTexto(
           etiqueta: 'Nombre',
           valorInicial: _nombre,

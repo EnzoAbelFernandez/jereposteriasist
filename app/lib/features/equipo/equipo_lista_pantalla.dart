@@ -60,6 +60,7 @@ class _EquipoListaPantallaState extends ConsumerState<EquipoListaPantalla> {
 
   @override
   Widget build(BuildContext context) {
+    final tema = Theme.of(context);
     final asyncPerfiles = ref.watch(perfilesProvider(_incluirInactivos));
 
     return PantallaBase(
@@ -87,65 +88,202 @@ class _EquipoListaPantallaState extends ConsumerState<EquipoListaPantalla> {
           label: const Text('Invitar empleado'),
         ),
       ),
-      cuerpo: ListaAsync<Perfil>(
-        valor: asyncPerfiles,
-        vacio: const EstadoVacio(
-          icono: Icons.badge_outlined,
-          mensaje: 'Todavía no hay miembros en el equipo',
-        ),
-        itemBuilder: (context, p) {
-          return ListTile(
-            leading: Avatar(p.nombre),
-            title: Row(
-              children: [
-                Flexible(child: Text(p.nombre)),
-                Separacion.chica,
-                InsigniaEstado(
-                  texto: p.rol.etiqueta,
-                  color: p.esJefe ? ColorEstado.info : ColorEstado.neutro,
+      cuerpo: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: tema.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.35,
                 ),
-                if (!p.activo) ...[
-                  Separacion.chica,
-                  const InsigniaEstado(
-                    texto: 'Inactivo',
-                    color: ColorEstado.advertencia,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: tema.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.groups_outlined,
+                    size: 20,
+                    color: tema.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Administrá los miembros del equipo, sus roles y los permisos de acceso a cada módulo.',
+                      style: tema.textTheme.bodySmall?.copyWith(
+                        color: tema.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                   ),
                 ],
-              ],
+              ),
             ),
-            subtitle: p.telefono != null && p.telefono!.isNotEmpty
-                ? Text(p.telefono!)
-                : null,
-            onTap: !p.esJefe
-                ? () => context.push(Rutas.equipoPermisos(p.id))
-                : null,
-            trailing: !p.esJefe
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        tooltip: 'Permisos',
-                        icon: const Icon(Icons.admin_panel_settings_outlined),
-                        onPressed: () =>
-                            context.push(Rutas.equipoPermisos(p.id)),
+          ),
+          Separacion.chica,
+          Expanded(
+            child: ListaAsync<Perfil>(
+              valor: asyncPerfiles,
+              separadores: false,
+              vacio: const EstadoVacio(
+                icono: Icons.badge_outlined,
+                mensaje: 'Todavía no hay miembros en el equipo',
+              ),
+              itemBuilder: (context, p) {
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 5,
+                  ),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: BorderSide(
+                      color: tema.colorScheme.outlineVariant.withValues(
+                        alpha: 0.5,
                       ),
-                      if (p.activo)
-                        IconButton(
-                          tooltip: 'Desactivar',
-                          icon: const Icon(Icons.person_off_outlined),
-                          onPressed: () => _desactivar(p),
-                        )
-                      else
-                        IconButton(
-                          tooltip: 'Reactivar',
-                          icon: const Icon(Icons.restore),
-                          onPressed: () => _reactivar(p),
-                        ),
-                    ],
-                  )
-                : null,
-          );
-        },
+                    ),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: !p.esJefe
+                        ? () => context.push(Rutas.equipoPermisos(p.id))
+                        : null,
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Avatar(p.nombre, radio: 22),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      p.nombre,
+                                      style: tema.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    if (p.telefono != null &&
+                                        p.telefono!.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.phone_outlined,
+                                            size: 13,
+                                            color: tema
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            p.telefono!,
+                                            style: tema.textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color: tema
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              Wrap(
+                                spacing: 6,
+                                children: [
+                                  InsigniaEstado(
+                                    texto: p.rol.etiqueta,
+                                    color: p.esJefe
+                                        ? ColorEstado.info
+                                        : ColorEstado.neutro,
+                                    icono: p.esJefe
+                                        ? Icons.admin_panel_settings_outlined
+                                        : Icons.badge_outlined,
+                                  ),
+                                  InsigniaEstado(
+                                    texto: p.activo ? 'Activo' : 'Inactivo',
+                                    color: p.activo
+                                        ? ColorEstado.exito
+                                        : ColorEstado.advertencia,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          if (!p.esJefe) ...[
+                            const SizedBox(height: 10),
+                            Divider(
+                              height: 1,
+                              color: tema.colorScheme.outlineVariant.withValues(
+                                alpha: 0.4,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                TextButton.icon(
+                                  icon: const Icon(
+                                    Icons.admin_panel_settings_outlined,
+                                    size: 18,
+                                  ),
+                                  label: const Text('Permisos'),
+                                  style: TextButton.styleFrom(
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                  onPressed: () =>
+                                      context.push(Rutas.equipoPermisos(p.id)),
+                                ),
+                                const SizedBox(width: 8),
+                                if (p.activo)
+                                  TextButton.icon(
+                                    icon: const Icon(
+                                      Icons.person_off_outlined,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Desactivar'),
+                                    style: TextButton.styleFrom(
+                                      visualDensity: VisualDensity.compact,
+                                      foregroundColor: tema.colorScheme.error,
+                                    ),
+                                    onPressed: () => _desactivar(p),
+                                  )
+                                else
+                                  TextButton.icon(
+                                    icon: const Icon(Icons.restore, size: 18),
+                                    label: const Text('Reactivar'),
+                                    style: TextButton.styleFrom(
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    onPressed: () => _reactivar(p),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -199,6 +337,7 @@ class _DialogoInvitarEmpleadoState
               CampoTexto(
                 etiqueta: 'Nombre',
                 obligatorio: true,
+                icono: Icons.person_outline,
                 onChanged: (v) => _nombre = v,
               ),
               Separacion.media,
@@ -206,12 +345,14 @@ class _DialogoInvitarEmpleadoState
                 etiqueta: 'Email',
                 obligatorio: true,
                 teclado: TextInputType.emailAddress,
+                icono: Icons.mail_outline,
                 onChanged: (v) => _email = v,
               ),
               Separacion.media,
               CampoTexto(
                 etiqueta: 'Teléfono (opcional)',
                 teclado: TextInputType.phone,
+                icono: Icons.phone_outlined,
                 onChanged: (v) => _telefono = v,
               ),
             ],

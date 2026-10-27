@@ -83,10 +83,43 @@ class _InsumoFormularioPantallaState
     }
   }
 
-  Widget _construirFormulario() {
+  Widget _construirFormulario({InsumoConStock? itemConStock}) {
     return FormularioResponsivo(
       formKey: _formKey,
       campos: [
+        if (itemConStock != null)
+          TarjetaSeccion(
+            titulo: 'Estado del stock',
+            icono: Icons.inventory_2_outlined,
+            accion: itemConStock.faltante
+                ? InsigniaEstado(
+                    texto:
+                        'Falta ${itemConStock.insumo.unidad.formatear(itemConStock.cantidadFaltante)}',
+                    color: ColorEstado.peligro,
+                    icono: Icons.warning_amber_rounded,
+                  )
+                : const InsigniaEstado(
+                    texto: 'Stock en nivel normal',
+                    color: ColorEstado.exito,
+                    icono: Icons.check_circle_outline,
+                  ),
+            children: [
+              FilaDato(
+                etiqueta: 'Stock disponible',
+                valor: itemConStock.stockTexto,
+                icono: Icons.inventory_outlined,
+              ),
+              FilaDato(
+                etiqueta: 'Stock mínimo',
+                valor: itemConStock.insumo.stockMinimo > 0
+                    ? itemConStock.insumo.unidad.formatear(
+                        itemConStock.insumo.stockMinimo,
+                      )
+                    : 'Sin mínimo configurado',
+                icono: Icons.tune_outlined,
+              ),
+            ],
+          ),
         CampoTexto(
           etiqueta: 'Nombre',
           valorInicial: _nombre,
@@ -107,7 +140,7 @@ class _InsumoFormularioPantallaState
           },
         ),
         CampoCantidad(
-          etiqueta: 'Stock mínimo (para avisar faltante)',
+          etiqueta: 'Stock mínimo (avisa cuando falte)',
           unidad: _unidad,
           valorInicial: _stockMinimo,
           permitirCero: true,
@@ -115,7 +148,7 @@ class _InsumoFormularioPantallaState
         ),
         if (!widget.esEdicion)
           CampoCantidad(
-            etiqueta: 'Stock actual (opcional)',
+            etiqueta: 'Stock inicial (opcional)',
             unidad: _unidad,
             valorInicial: _stockInicial,
             permitirCero: true,
@@ -169,7 +202,7 @@ class _InsumoFormularioPantallaState
         valor: asyncInsumo,
         builder: (context, item) {
           _precargar(item!.insumo);
-          return _construirFormulario();
+          return _construirFormulario(itemConStock: item);
         },
       ),
     );

@@ -165,52 +165,114 @@ class _EquipoPermisosPantallaState
     final miPerfil = ref.watch(perfilActualProvider).asData?.value;
 
     return ListView(
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 48),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 48),
       children: [
-        if (miPerfil?.id != perfil.id)
-          TarjetaSeccion(
-            titulo: 'Rol en el equipo',
-            children: [
-              Text(
-                perfil.esJefe
-                    ? 'Rol actual: Jefe (acceso total a todos los módulos)'
-                    : 'Rol actual: Empleado (acceso según permisos por módulo)',
-              ),
-              Separacion.chica,
-              OutlinedButton.icon(
-                onPressed: _procesando ? null : () => _cambiarRol(perfil),
-                icon: const Icon(Icons.admin_panel_settings_outlined),
-                label: Text(
-                  perfil.esJefe ? 'Pasar a empleado' : 'Convertir en jefe',
-                ),
-              ),
-            ],
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(
+              color: tema.colorScheme.outlineVariant.withValues(alpha: 0.5),
+            ),
           ),
-        if (perfil.esJefe) ...[
-          Card(
-            color: tema.colorScheme.surfaceContainerHighest,
-            margin: const EdgeInsets.only(bottom: 16),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, color: tema.colorScheme.primary),
-                  Separacion.media,
-                  Expanded(
-                    child: Text(
-                      'El jefe tiene acceso total a todos los módulos',
-                      style: tema.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Avatar(perfil.nombre, radio: 26),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        perfil.nombre,
+                        style: tema.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
+                      if (perfil.telefono != null &&
+                          perfil.telefono!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          perfil.telefono!,
+                          style: tema.textTheme.bodySmall?.copyWith(
+                            color: tema.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        children: [
+                          InsigniaEstado(
+                            texto: perfil.rol.etiqueta,
+                            color: perfil.esJefe
+                                ? ColorEstado.info
+                                : ColorEstado.neutro,
+                            icono: perfil.esJefe
+                                ? Icons.admin_panel_settings_outlined
+                                : Icons.badge_outlined,
+                          ),
+                          InsigniaEstado(
+                            texto: perfil.activo ? 'Activo' : 'Inactivo',
+                            color: perfil.activo
+                                ? ColorEstado.exito
+                                : ColorEstado.advertencia,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (miPerfil?.id != perfil.id)
+                  OutlinedButton.icon(
+                    onPressed: _procesando ? null : () => _cambiarRol(perfil),
+                    icon: const Icon(
+                      Icons.published_with_changes_outlined,
+                      size: 16,
+                    ),
+                    label: Text(
+                      perfil.esJefe ? 'Pasar a empleado' : 'Hacer jefe',
+                      style: const TextStyle(fontSize: 12),
                     ),
                   ),
-                ],
+              ],
+            ),
+          ),
+        ),
+        Separacion.chica,
+        if (perfil.esJefe) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: tema.colorScheme.primaryContainer.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: tema.colorScheme.primary.withValues(alpha: 0.2),
               ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.verified_user_outlined,
+                  color: tema.colorScheme.primary,
+                ),
+                Separacion.media,
+                Expanded(
+                  child: Text(
+                    'El jefe tiene acceso total a todos los módulos. Para restringir permisos, pasalo primero a empleado.',
+                    style: tema.textTheme.bodySmall?.copyWith(
+                      color: tema.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ] else ...[
           TarjetaSeccion(
-            titulo: 'Atajos',
+            titulo: 'Atajos de configuración rápida',
             children: [
               Wrap(
                 spacing: 8,
@@ -220,22 +282,22 @@ class _EquipoPermisosPantallaState
                     onPressed: _procesando
                         ? null
                         : () => _aplicarSoloProduccionYStock(perfil),
-                    icon: const Icon(Icons.bakery_dining_outlined),
+                    icon: const Icon(Icons.bakery_dining_outlined, size: 18),
                     label: const Text('Solo producción y stock'),
                   ),
                   OutlinedButton.icon(
                     onPressed: _procesando
                         ? null
                         : () => _aplicarAtencionPedidos(perfil),
-                    icon: const Icon(Icons.receipt_long_outlined),
+                    icon: const Icon(Icons.receipt_long_outlined, size: 18),
                     label: const Text('Atención de pedidos'),
                   ),
                   OutlinedButton.icon(
                     onPressed: _procesando
                         ? null
                         : () => _aplicarQuitarTodos(perfil),
-                    icon: const Icon(Icons.block_outlined),
-                    label: const Text('Quitar todos los permisos'),
+                    icon: const Icon(Icons.block_outlined, size: 18),
+                    label: const Text('Quitar todos'),
                   ),
                 ],
               ),
@@ -243,12 +305,22 @@ class _EquipoPermisosPantallaState
           ),
         ],
         Padding(
-          padding: const EdgeInsets.only(bottom: 8, top: 4),
-          child: Text(
-            'Permisos por módulo',
-            style: tema.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+          padding: const EdgeInsets.only(bottom: 10, top: 12),
+          child: Row(
+            children: [
+              Icon(
+                Icons.security_outlined,
+                size: 20,
+                color: tema.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Permisos por módulo',
+                style: tema.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
         ),
         for (final modulo in Modulo.values)
@@ -278,12 +350,45 @@ class _TarjetaModulo extends StatelessWidget {
   final NivelPermiso nivelActual;
   final ValueChanged<NivelPermiso> onCambiar;
 
+  String _etiquetaNivel(NivelPermiso nivel) {
+    switch (nivel) {
+      case NivelPermiso.ninguno:
+        return 'Ninguno';
+      case NivelPermiso.ver:
+        return 'Ver';
+      case NivelPermiso.cargar:
+        return 'Cargar';
+      case NivelPermiso.editar:
+        return 'Editar';
+    }
+  }
+
+  ColorEstado _colorNivel(NivelPermiso nivel) {
+    switch (nivel) {
+      case NivelPermiso.ninguno:
+        return ColorEstado.neutro;
+      case NivelPermiso.ver:
+        return ColorEstado.info;
+      case NivelPermiso.cargar:
+        return ColorEstado.advertencia;
+      case NivelPermiso.editar:
+        return ColorEstado.exito;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 10),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: tema.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -291,38 +396,70 @@ class _TarjetaModulo extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(modulo.icono, color: tema.colorScheme.primary),
-                Separacion.chica,
-                Expanded(
-                  child: Text(
-                    modulo.etiqueta,
-                    style: tema.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: tema.colorScheme.primaryContainer.withValues(
+                      alpha: 0.45,
                     ),
+                    borderRadius: BorderRadius.circular(8),
                   ),
+                  child: Icon(
+                    modulo.icono,
+                    color: tema.colorScheme.primary,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        modulo.etiqueta,
+                        style: tema.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        nivelActual.descripcion,
+                        style: tema.textTheme.bodySmall?.copyWith(
+                          color: tema.colorScheme.onSurfaceVariant,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                InsigniaEstado(
+                  texto: _etiquetaNivel(nivelActual),
+                  color: _colorNivel(nivelActual),
                 ),
               ],
             ),
-            Separacion.chica,
+            const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
               child: SegmentedButton<NivelPermiso>(
                 showSelectedIcon: false,
-                style: const ButtonStyle(
+                style: ButtonStyle(
                   visualDensity: VisualDensity.compact,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  padding: WidgetStateProperty.all(
+                    const EdgeInsets.symmetric(horizontal: 4),
+                  ),
                 ),
                 segments: [
                   for (final nivel in NivelPermiso.values)
                     ButtonSegment<NivelPermiso>(
                       value: nivel,
                       label: Text(
-                        nivel.etiqueta,
+                        _etiquetaNivel(nivel),
                         style: const TextStyle(fontSize: 12),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      tooltip: nivel.descripcion,
+                      tooltip: '${_etiquetaNivel(nivel)}: ${nivel.descripcion}',
                     ),
                 ],
                 selected: {nivelActual},

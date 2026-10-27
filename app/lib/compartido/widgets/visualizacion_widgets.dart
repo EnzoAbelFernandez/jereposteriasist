@@ -38,10 +38,14 @@ class InsigniaEstado extends StatelessWidget {
   Widget build(BuildContext context) {
     final paleta = resolverColorEstado(context, color);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: paleta.fondo,
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: paleta.frente.withValues(alpha: 0.18),
+          width: 1,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -109,7 +113,8 @@ class TextoDinero extends StatelessWidget {
         colorTexto = cs.error;
       }
     }
-    final baseStyle = estilo ?? Theme.of(context).textTheme.bodyMedium;
+    final baseStyle = (estilo ?? Theme.of(context).textTheme.bodyMedium)
+        ?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
     return Text(
       monto.formatear(conSigno: conSigno),
       style: colorTexto != null
@@ -188,22 +193,28 @@ class TarjetaMetrica extends StatelessWidget {
     final tema = Theme.of(context);
     return Card(
       clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: paleta.fondo.withValues(alpha: 0.8), width: 1),
+      ),
       child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
               if (icono != null) ...[
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     color: paleta.fondo,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icono, color: paleta.frente),
+                  child: Icon(icono, color: paleta.frente, size: 22),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
               ],
               Expanded(
                 child: Column(
@@ -214,13 +225,15 @@ class TarjetaMetrica extends StatelessWidget {
                       titulo,
                       style: tema.textTheme.labelMedium?.copyWith(
                         color: tema.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       valor,
                       style: tema.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
+                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
                   ],

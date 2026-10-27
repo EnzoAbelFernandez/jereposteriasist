@@ -107,29 +107,85 @@ class _ProductoFormularioPantallaState
         ),
         if (costo != null)
           TarjetaSeccion(
-            titulo: 'Costeo según receta',
+            titulo: 'Costeo y rentabilidad',
+            icono: Icons.analytics_outlined,
+            accion: costo.margenPorcentaje != null
+                ? InsigniaEstado(
+                    texto: 'Margen ${costo.margenPorcentaje}%',
+                    color: costo.margenPorcentaje! >= 60
+                        ? ColorEstado.exito
+                        : (costo.margenPorcentaje! >= 40
+                              ? ColorEstado.advertencia
+                              : ColorEstado.peligro),
+                  )
+                : null,
             children: [
-              FilaDato(etiqueta: 'Receta vinculada', valor: costo.recetaNombre),
               FilaDato(
-                etiqueta: 'Costo estimado por unidad',
-                valor: costo.costoUnitario.formatear(),
+                etiqueta: 'Receta vinculada',
+                valor: costo.recetaNombre,
+                icono: Icons.menu_book_outlined,
               ),
+              FilaDato(
+                etiqueta: 'Costo de insumos',
+                valor: costo.costoUnitario.formatear(),
+                icono: Icons.inventory_2_outlined,
+              ),
+              if (costo.precioVenta != null)
+                FilaDato(
+                  etiqueta: 'Precio de venta actual',
+                  valor: costo.precioVenta!.formatear(),
+                  icono: Icons.payments_outlined,
+                ),
+              if (costo.margenUnitario != null)
+                FilaDato(
+                  etiqueta: 'Ganancia estimada',
+                  valor:
+                      '${costo.margenUnitario!.formatear()} por unidad (${costo.margenPorcentaje}%)',
+                  icono: Icons.trending_up_outlined,
+                ),
               FilaDato(
                 etiqueta: 'Precio sugerido (×3)',
                 valor: costo.precioSugerido().formatear(),
+                icono: Icons.lightbulb_outline,
               ),
-              if (costo.margenPorcentaje != null)
-                FilaDato(
-                  etiqueta: 'Margen actual',
-                  valor:
-                      '${costo.margenPorcentaje}% (${costo.margenUnitario!.formatear()})',
+              if (!costo.tieneCostoCompleto) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: resolverColorEstado(
+                      context,
+                      ColorEstado.advertencia,
+                    ).fondo,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 18,
+                        color: resolverColorEstado(
+                          context,
+                          ColorEstado.advertencia,
+                        ).frente,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Costo parcial: algún ingrediente aún no registra compras para calcular su valor real.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: resolverColorEstado(
+                              context,
+                              ColorEstado.advertencia,
+                            ).frente,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              if (!costo.tieneCostoCompleto)
-                const FilaDato(
-                  etiqueta: 'Aviso',
-                  valor: 'Algún ingrediente de la receta todavía no tiene compras registradas',
-                  icono: Icons.info_outline,
-                ),
+              ],
             ],
           ),
         CampoTexto(

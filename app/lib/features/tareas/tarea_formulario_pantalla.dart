@@ -79,18 +79,48 @@ class _TareaFormularioPantallaState
   }
 
   Widget _construirFormulario() {
+    final tema = Theme.of(context);
+
     return FormularioResponsivo(
       formKey: _formKey,
       campos: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: tema.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.35,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: tema.colorScheme.outlineVariant.withValues(alpha: 0.4),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.task_alt_outlined, color: tema.colorScheme.primary),
+              Separacion.media,
+              Expanded(
+                child: Text(
+                  widget.esEdicion
+                      ? 'Editá los detalles, responsable o fecha límite de la tarea.'
+                      : 'Asigná tareas al equipo para coordinar producción, pedidos o compras.',
+                  style: tema.textTheme.bodySmall?.copyWith(
+                    color: tema.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
         CampoTexto(
           etiqueta: 'Título',
           valorInicial: _titulo,
           obligatorio: true,
-          icono: Icons.task_alt_outlined,
+          icono: Icons.edit_note_outlined,
           onChanged: (v) => _titulo = v,
         ),
         SelectorOpcion<TipoTarea>(
-          etiqueta: 'Tipo',
+          etiqueta: 'Tipo de tarea',
           opciones: TipoTarea.values,
           valor: _tipo,
           etiquetaDe: (t) => t.etiqueta,
@@ -98,14 +128,44 @@ class _TareaFormularioPantallaState
             if (v != null) setState(() => _tipo = v);
           },
         ),
-        SelectorOpcion<PrioridadTarea>(
-          etiqueta: 'Prioridad',
-          opciones: PrioridadTarea.values,
-          valor: _prioridad,
-          etiquetaDe: (p) => p.etiqueta,
-          onChanged: (v) {
-            if (v != null) setState(() => _prioridad = v);
-          },
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                'Prioridad',
+                style: tema.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: tema.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<PrioridadTarea>(
+                segments: [
+                  for (final p in PrioridadTarea.values)
+                    ButtonSegment(
+                      value: p,
+                      label: Text(p.etiqueta),
+                      icon: Icon(
+                        p == PrioridadTarea.alta
+                            ? Icons.priority_high
+                            : (p == PrioridadTarea.media
+                                  ? Icons.remove
+                                  : Icons.arrow_downward),
+                        size: 16,
+                      ),
+                    ),
+                ],
+                selected: {_prioridad},
+                onSelectionChanged: (seleccion) {
+                  setState(() => _prioridad = seleccion.first);
+                },
+              ),
+            ),
+          ],
         ),
         SoloJefe(
           child: SelectorPerfil(

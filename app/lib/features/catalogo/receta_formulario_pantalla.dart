@@ -16,11 +16,17 @@ class RecetaFormularioPantalla extends ConsumerStatefulWidget {
 }
 
 class _RenglonReceta {
-  _RenglonReceta({this.insumoId, this.unidad, this.cantidad});
+  _RenglonReceta({
+    this.insumoId,
+    this.unidad,
+    this.cantidad,
+    this.costoEstimado,
+  });
 
   String? insumoId;
   Unidad? unidad;
   int? cantidad;
+  Dinero? costoEstimado;
 }
 
 class _RecetaFormularioPantallaState
@@ -34,6 +40,8 @@ class _RecetaFormularioPantallaState
   int _rindeCantidad = 1;
   String _rindeDescripcion = '';
   String _notas = '';
+  Dinero _costoTotal = Dinero.cero;
+  bool _tieneCostoCompleto = true;
   final List<_RenglonReceta> _renglones = [];
 
   @override
@@ -52,6 +60,8 @@ class _RecetaFormularioPantallaState
     _rindeCantidad = detalle.receta.rindeCantidad;
     _rindeDescripcion = detalle.receta.rindeDescripcion ?? '';
     _notas = detalle.receta.notas ?? '';
+    _costoTotal = detalle.costoTotalEstimado;
+    _tieneCostoCompleto = detalle.tieneCostoCompleto;
     _renglones.clear();
     for (final it in detalle.items) {
       _renglones.add(
@@ -59,6 +69,7 @@ class _RecetaFormularioPantallaState
           insumoId: it.item.insumoId,
           unidad: it.unidad,
           cantidad: it.item.cantidad,
+          costoEstimado: it.costoEstimado,
         ),
       );
     }
@@ -137,37 +148,44 @@ class _RecetaFormularioPantallaState
 
   Widget _construirRenglonIngrediente(int index) {
     final item = _renglones[index];
+    final tema = Theme.of(context);
     return Card(
       key: ObjectKey(item),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: tema.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: SelectorInsumo(
-                    insumoId: item.insumoId,
-                    obligatorio: true,
-                    excluir: {
-                      for (var j = 0; j < _renglones.length; j++)
-                        if (j != index && _renglones[j].insumoId != null)
-                          _renglones[j].insumoId!,
-                    },
-                    onChanged: (nuevoInsumo) {
-                      setState(() {
-                        if (item.insumoId != nuevoInsumo?.id) {
-                          item.insumoId = nuevoInsumo?.id;
-                          item.unidad = nuevoInsumo?.unidad;
-                          item.cantidad = null;
-                        }
-                      });
-                    },
+                CircleAvatar(
+                  radius: 12,
+                  backgroundColor: tema.colorScheme.primaryContainer,
+                  foregroundColor: tema.colorScheme.onPrimaryContainer,
+                  child: Text(
+                    '${index + 1}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
+                const SizedBox(width: 8),
+                Text(
+                  'Ingrediente ${index + 1}',
+                  style: tema.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
                 if (_renglones.length > 1)
                   IconButton(
                     tooltip: 'Quitar ingrediente',
@@ -179,6 +197,26 @@ class _RecetaFormularioPantallaState
                     },
                   ),
               ],
+            ),
+            const SizedBox(height: 8),
+            SelectorInsumo(
+              insumoId: item.insumoId,
+              obligatorio: true,
+              excluir: {
+                for (var j = 0; j < _renglones.length; j++)
+                  if (j != index && _renglones[j].insumoId != null)
+                    _renglones[j].insumoId!,
+              },
+              onChanged: (nuevoInsumo) {
+                setState(() {
+                  if (item.insumoId != nuevoInsumo?.id) {
+                    item.insumoId = nuevoInsumo?.id;
+                    item.unidad = nuevoInsumo?.unidad;
+                    item.cantidad = null;
+                    item.costoEstimado = null;
+                  }
+                });
+              },
             ),
             if (item.insumoId != null && item.unidad != null) ...[
               Separacion.chica,
@@ -193,6 +231,31 @@ class _RecetaFormularioPantallaState
                 permitirCero: false,
                 onChanged: (c) => item.cantidad = c,
               ),
+              if (item.costoEstimado != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.payments_outlined,
+                      size: 14,
+                      color: tema.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Costo proporcional: ',
+                      style: tema.textTheme.bodySmall?.copyWith(
+                        color: tema.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    TextoDinero(
+                      item.costoEstimado!,
+                      estilo: tema.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ],
         ),
@@ -240,6 +303,7 @@ class _RecetaFormularioPantallaState
         ),
         TarjetaSeccion(
           titulo: 'Ingredientes',
+          icono: Icons.kitchen_outlined,
           children: [
             for (var i = 0; i < _renglones.length; i++) ...[
               if (i > 0) Separacion.chica,
@@ -255,6 +319,59 @@ class _RecetaFormularioPantallaState
               icon: const Icon(Icons.add),
               label: const Text('Agregar ingrediente'),
             ),
+            if (_costoTotal.esPositivo) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Costo total de insumos',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                        ),
+                        if (_rindeCantidad > 1)
+                          Text(
+                            'Por unidad de rinde: ${Dinero(_costoTotal.centavos ~/ _rindeCantidad).formatear()}',
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                          ),
+                      ],
+                    ),
+                    TextoDinero(
+                      _costoTotal,
+                      estilo: Theme.of(context).textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+              if (!_tieneCostoCompleto) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Costo parcial: algunos ingredientes aún no registran compras.',
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: Theme.of(context).colorScheme.outline),
+                ),
+              ],
+            ],
           ],
         ),
         CampoTexto(

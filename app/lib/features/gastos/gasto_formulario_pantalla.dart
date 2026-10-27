@@ -58,11 +58,42 @@ class _GastoFormularioPantallaState
 
   @override
   Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
     return PantallaBase(
       titulo: 'Registrar gasto',
       cuerpo: FormularioResponsivo(
         formKey: _formKey,
         campos: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: tema.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.3,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: tema.colorScheme.outlineVariant.withValues(alpha: 0.4),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.receipt_long_outlined,
+                  color: tema.colorScheme.primary,
+                ),
+                Separacion.media,
+                Expanded(
+                  child: Text(
+                    'Cargá los detalles del gasto operativo o compra general para impactar en caja y reportes.',
+                    style: tema.textTheme.bodySmall?.copyWith(
+                      color: tema.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           CampoFecha(
             etiqueta: 'Fecha',
             valor: _fecha,
@@ -92,9 +123,24 @@ class _GastoFormularioPantallaState
             permitirCero: false,
             onChanged: (d) => _monto = d,
           ),
-          SelectorMedioPago(
-            valor: _medioPago,
-            onChanged: (m) => setState(() => _medioPago = m),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  'Medio de pago',
+                  style: tema.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: tema.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              SelectorMedioPago(
+                valor: _medioPago,
+                onChanged: (m) => setState(() => _medioPago = m),
+              ),
+            ],
           ),
           CampoTexto(
             etiqueta: 'Notas (opcional)',
