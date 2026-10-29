@@ -26,68 +26,43 @@ class PantallaBase extends ConsumerWidget {
 
   Widget? _construirIndicadorSync(BuildContext context, EstadoSync? sync) {
     if (sync == null) return null;
+    if (sync.alDia) return null;
     final cs = Theme.of(context).colorScheme;
-
-    if (!sync.conectado) {
-      return Tooltip(
-        message: 'Modo sin conexión (los cambios se guardan localmente)',
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: cs.outlineVariant.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.cloud_off_outlined, size: 15, color: cs.outline),
-              const SizedBox(width: 4),
-              Text(
-                'Offline',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: cs.outline,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
+    final conError = sync.tieneError;
+    return Tooltip(
+      message: sync.detalle,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: cs.outlineVariant.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(12),
         ),
-      );
-    }
-
-    if (sync.cambiosPendientes > 0) {
-      return Tooltip(
-        message:
-            '${sync.cambiosPendientes} cambio(s) pendiente(s) de sincronizar',
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: cs.secondaryContainer.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.sync, size: 15, color: cs.onSecondaryContainer),
-              const SizedBox(width: 4),
-              Text(
-                '${sync.cambiosPendientes}',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: cs.onSecondaryContainer,
-                  fontWeight: FontWeight.bold,
-                ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              conError
+                  ? Icons.error_outline
+                  : sync.modoWeb
+                  ? Icons.language
+                  : Icons.sync,
+              size: 15,
+              color: conError ? cs.error : cs.outline,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              sync.textoEstado,
+              style: TextStyle(
+                fontSize: 11,
+                color: cs.outline,
+                fontWeight: FontWeight.w600,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      );
-    }
-
-    return null;
+      ),
+    );
   }
 
   @override

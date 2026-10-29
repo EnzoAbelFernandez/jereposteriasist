@@ -154,44 +154,50 @@ class _IndicadorSyncCompacto extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final conectado = sync?.conectado ?? false;
-    final pendientes = sync?.cambiosPendientes ?? 0;
+    final estado = sync ?? const EstadoSync();
+    final conError = estado.tieneError;
+    final icono = conError
+        ? Icons.error_outline
+        : estado.modoWeb
+        ? Icons.language
+        : estado.alDia
+        ? Icons.cloud_done_outlined
+        : estado.conectado || estado.conectando
+        ? Icons.sync
+        : Icons.cloud_off_outlined;
+    final color = conError
+        ? cs.error
+        : estado.alDia
+        ? cs.primary
+        : cs.outline;
+    final texto = sync == null
+        ? 'Verificando sincronización'
+        : estado.textoEstado;
 
-    IconData icono = Icons.cloud_done_outlined;
-    Color color = cs.primary;
-    String texto = 'Al día';
-
-    if (!conectado) {
-      icono = Icons.cloud_off_outlined;
-      color = cs.outline;
-      texto = 'Offline';
-    } else if (pendientes > 0) {
-      icono = Icons.sync;
-      color = cs.secondary;
-      texto = '$pendientes pend.';
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icono, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(
-            texto,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: color,
+    return Tooltip(
+      message: estado.detalle,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icono, size: 14, color: color),
+            const SizedBox(width: 4),
+            Text(
+              texto,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -302,6 +308,17 @@ class _ShellAdaptativo extends ConsumerWidget {
                                 ),
                               ),
                             ],
+                            if (perfil == null)
+                              IconButton(
+                                tooltip: 'Cerrar sesión',
+                                icon: const Icon(Icons.logout),
+                                onPressed: () async {
+                                  await ref
+                                      .read(sesionControllerProvider)
+                                      .cerrarSesion();
+                                  if (context.mounted) context.go(Rutas.login);
+                                },
+                              ),
                           ],
                         ),
                       ),
@@ -327,7 +344,6 @@ class _ShellAdaptativo extends ConsumerWidget {
     }
 
     final principales = visibles.take(4).toList();
-    final tieneMas = visibles.length > 4;
     final idxCompacto = idx < principales.length ? idx : principales.length;
     final alertasEnMas =
         visibles.skip(4).any((d) => d.ruta == Rutas.alertas) && noLeidas > 0;
@@ -336,11 +352,9 @@ class _ShellAdaptativo extends ConsumerWidget {
       body: child,
       bottomNavigationBar: principales.length >= 2
           ? NavigationBar(
-              selectedIndex: tieneMas
-                  ? idxCompacto
-                  : idx.clamp(0, principales.length - 1),
+              selectedIndex: idxCompacto,
               onDestinationSelected: (i) {
-                if (tieneMas && i == principales.length) {
+                if (i == principales.length) {
                   showModalBottomSheet<void>(
                     context: context,
                     isScrollControlled: true,
@@ -491,16 +505,15 @@ class _ShellAdaptativo extends ConsumerWidget {
                     icon: _iconoDestino(d, noLeidas),
                     label: d.etiqueta,
                   ),
-                if (tieneMas)
-                  NavigationDestination(
-                    icon: alertasEnMas
-                        ? Badge.count(
-                            count: noLeidas,
-                            child: const Icon(Icons.menu),
-                          )
-                        : const Icon(Icons.menu),
-                    label: 'Más',
-                  ),
+                NavigationDestination(
+                  icon: alertasEnMas
+                      ? Badge.count(
+                          count: noLeidas,
+                          child: const Icon(Icons.menu),
+                        )
+                      : const Icon(Icons.menu),
+                  label: 'Más',
+                ),
               ],
             )
           : null,
@@ -522,6 +535,49 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
       if (estaAutenticado && estaEnLogin) {
         return Rutas.inicio;
+      }
+      if (estaAutenticado && !estaEnLogin) {
+        final uid = almacen.usuarioActualId!;
+        final perfil = almacen.perfiles[uid];
+        final permisos = perfil == null || !perfil.activo
+            ? PermisosUsuario.vacio
+            : PermisosUsuario(
+                esJefe: perfil.esJefe,
+                niveles: almacen.permisos[uid] ?? {},
+              );
+        final path = state.uri.path;
+        if ((path == Rutas.configuracion ||
+                path == Rutas.equipo ||
+                path.startsWith('${Rutas.equipo}/')) &&
+            !permisos.esJefe) {
+          return Rutas.inicio;
+        }
+        final rutasProtegidas = <String, Modulo>{
+          Rutas.clientes: Modulo.clientes,
+          Rutas.pedidos: Modulo.pedidos,
+          Rutas.productos: Modulo.catalogo,
+          Rutas.recetas: Modulo.produccion,
+          Rutas.stock: Modulo.stock,
+          Rutas.compras: Modulo.compras,
+          Rutas.proveedores: Modulo.compras,
+          Rutas.produccion: Modulo.produccion,
+          Rutas.caja: Modulo.caja,
+          Rutas.gastos: Modulo.gastos,
+          Rutas.reportes: Modulo.reportes,
+        };
+        for (final entrada in rutasProtegidas.entries) {
+          final esDetallePedidoParaProduccion =
+              entrada.key == Rutas.pedidos &&
+              state.uri.pathSegments.length == 2 &&
+              state.uri.pathSegments.last != 'nuevo' &&
+              state.uri.pathSegments.last != 'calendario' &&
+              permisos.puede(Modulo.produccion, NivelPermiso.ver);
+          if ((path == entrada.key || path.startsWith('${entrada.key}/')) &&
+              !esDetallePedidoParaProduccion &&
+              !permisos.puede(entrada.value, NivelPermiso.ver)) {
+            return Rutas.inicio;
+          }
+        }
       }
       return null;
     },

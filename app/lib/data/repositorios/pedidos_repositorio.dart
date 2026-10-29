@@ -29,7 +29,6 @@ abstract class PedidosRepositorio {
 class _PedidosRepositorioLocal implements PedidosRepositorio {
   _PedidosRepositorioLocal(this._almacen);
   final AlmacenLocal _almacen;
-  int _secuenciaLocal = 1;
 
   String? _limpiar(String? s) {
     final t = s?.trim();
@@ -208,10 +207,8 @@ class _PedidosRepositorioLocal implements PedidosRepositorio {
     }
 
     final id = _almacen.generarId();
-    final numero = _secuenciaLocal++;
     final pedido = Pedido(
       id: id,
-      numero: numero,
       clienteId: datos.clienteId,
       fechaEntrega: datos.fechaEntrega,
       tipoEntrega: datos.tipoEntrega,
@@ -250,7 +247,7 @@ class _PedidosRepositorioLocal implements PedidosRepositorio {
         monto: sena.monto,
         medioPago: sena.medioPago,
         concepto: ConceptoCaja.sena,
-        descripcion: 'Seña pedido #$numero',
+        descripcion: 'Seña de pedido pendiente de numeración',
         pedidoId: id,
         creadoPor: _almacen.usuarioActualId,
         creadoPorNombre: _almacen.nombreDePerfil(_almacen.usuarioActualId),

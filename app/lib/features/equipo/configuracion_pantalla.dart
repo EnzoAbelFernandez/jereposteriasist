@@ -53,7 +53,7 @@ class _ConfiguracionPantallaState extends ConsumerState<ConfiguracionPantalla> {
     if (mounted) {
       await mostrarDialogoExportacion(
         context,
-        titulo: 'Copia de seguridad (JSON)',
+        titulo: 'Exportación parcial (JSON)',
         nombreArchivo: 'respaldo_jereposteria.json',
         contenido: json,
       );
@@ -70,7 +70,7 @@ class _ConfiguracionPantallaState extends ConsumerState<ConfiguracionPantalla> {
       titulo: 'Configuración',
       acciones: [
         IconButton(
-          tooltip: 'Exportar respaldo',
+          tooltip: 'Exportar datos parciales',
           icon: const Icon(Icons.backup_outlined),
           onPressed: _exportarBackup,
         ),
@@ -259,7 +259,7 @@ class _ConfiguracionPantallaState extends ConsumerState<ConfiguracionPantalla> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Copia de seguridad y exportación',
+                      'Exportación parcial de datos',
                       style: tema.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -283,7 +283,7 @@ class _ConfiguracionPantallaState extends ConsumerState<ConfiguracionPantalla> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Generá un archivo JSON con todos los datos locales para resguardo o para migrar a otro dispositivo.',
+                        'Copiá un resumen parcial en formato JSON. No incluye todos los datos y no permite restaurar ni migrar la aplicación.',
                         style: tema.textTheme.bodySmall?.copyWith(
                           color: tema.colorScheme.onSurfaceVariant,
                         ),
@@ -292,7 +292,7 @@ class _ConfiguracionPantallaState extends ConsumerState<ConfiguracionPantalla> {
                       OutlinedButton.icon(
                         onPressed: _exportarBackup,
                         icon: const Icon(Icons.download_outlined, size: 18),
-                        label: const Text('Exportar copia de seguridad (JSON)'),
+                        label: const Text('Ver datos para copiar (JSON)'),
                       ),
                     ],
                   ),

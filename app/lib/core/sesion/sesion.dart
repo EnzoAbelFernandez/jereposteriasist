@@ -4,10 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jereposteria/compartido/tipos/enums.dart';
 import 'package:jereposteria/compartido/tipos/errores.dart';
-import 'package:jereposteria/core/config/entorno.dart';
 import 'package:jereposteria/core/notificaciones/notificaciones_push.dart';
 import 'package:jereposteria/core/sync/sincronizacion_directa.dart';
-import 'package:jereposteria/core/sync/supabase_connector.dart';
 import 'package:jereposteria/data/local/almacen_local.dart';
 import 'package:jereposteria/data/modelos/alertas_equipo_modelos.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -41,15 +39,7 @@ final perfilActualProvider = StreamProvider<Perfil?>((ref) {
     final uid = almacen.usuarioActualId;
     if (uid == null) return null;
     final p = almacen.perfiles[uid];
-    if (p == null) {
-      return Perfil(
-        id: uid,
-        nombre: almacen.nombreDePerfil(uid) ?? 'Usuario',
-        rol: Rol.jefe,
-        activo: true,
-      );
-    }
-    if (!p.activo) return null;
+    if (p == null || !p.activo) return null;
     return p;
   });
 });
@@ -60,28 +50,23 @@ final _permisosStreamProvider = StreamProvider<PermisosUsuario>((ref) {
     final uid = almacen.usuarioActualId;
     if (uid == null) return PermisosUsuario.vacio;
     final perfil = almacen.perfiles[uid];
-    if (perfil == null) {
-      return PermisosUsuario(
-        esJefe: true,
-        niveles: {for (final m in Modulo.values) m: NivelPermiso.editar},
-      );
-    }
-    if (!perfil.activo) return PermisosUsuario.vacio;
+    if (perfil == null || !perfil.activo) return PermisosUsuario.vacio;
     final mapa = Map<Modulo, NivelPermiso>.of(almacen.permisos[uid] ?? {});
     return PermisosUsuario(esJefe: perfil.esJefe, niveles: mapa);
   });
 });
 
 final permisosActualesProvider = Provider<PermisosUsuario>((ref) {
-  return ref.watch(_permisosStreamProvider).value ??
-      PermisosUsuario(esJefe: true, niveles: const {});
+  return ref.watch(_permisosStreamProvider).value ?? PermisosUsuario.vacio;
 });
 
 class SesionController {
-  SesionController(this._almacen);
+  SesionController(this._almacen, {this.supabase});
   final AlmacenLocal _almacen;
+  final SupabaseClient? supabase;
 
   SupabaseClient? get _supabaseOrNull {
+    if (supabase != null) return supabase;
     try {
       return Supabase.instance.client;
     } catch (_) {
@@ -98,65 +83,46 @@ class SesionController {
       throw const ErrorDeNegocio('Ingresá tu email y contraseña.');
     }
     final client = _supabaseOrNull;
-    if (client != null && _almacen.conectadoAInternet) {
-      try {
-        final res = await client.auth.signInWithPassword(
-          email: correo,
-          password: password,
-        );
-        final user = res.user;
-        if (user != null) {
-          _almacen.perfiles.putIfAbsent(
-            user.id,
-            () => Perfil(
-              id: user.id,
-              nombre:
-                  (user.userMetadata?['nombre'] as String?)
-                          ?.trim()
-                          .isNotEmpty ==
-                      true
-                  ? (user.userMetadata!['nombre'] as String).trim()
-                  : correo.split('@').first,
-              rol: Rol.jefe,
-              activo: true,
-            ),
-          );
-          _almacen.permisos.putIfAbsent(
-            user.id,
-            () => {for (final m in Modulo.values) m: NivelPermiso.editar},
-          );
-          _almacen.conectadoAInternet = true;
-          _almacen.usuarioActualId = user.id;
-          if (_almacen.db != null) {
-            unawaited(
-              _almacen.db!.connect(
-                connector: SupabasePowerSyncConnector(
-                  supabase: client,
-                  powersyncUrl: EntornoApp.powerSyncUrl,
-                ),
-              ),
-            );
-          }
-          unawaited(
-            SincronizacionDirectaSupabase.sincronizarTodo(_almacen, client),
-          );
-          SincronizacionDirectaSupabase.suscribirRealtime(_almacen, client);
-          unawaited(ServicioNotificacionesPush.registrarTokenEnSupabase());
-          ServicioNotificacionesPush.suscribirAlertasTiempoReal();
-          return;
-        }
-      } on AuthException catch (e) {
-        throw ErrorDeNegocio(
-          e.message.isNotEmpty
-              ? 'No pudimos iniciar sesión: ${e.message}'
-              : 'Credenciales inválidas.',
-        );
-      } catch (_) {
-        // Si falla la conexión de red, continúa en el almacén local.
-        _almacen.conectadoAInternet = false;
-      }
+    if (client == null) {
+      throw const ErrorDeNegocio('No pudimos inicializar el inicio de sesión.');
     }
-    _almacen.usuarioActualId = AlmacenLocal.idJefeLocal;
+    // La conexión de PowerSync no es un requisito para autenticar en Supabase.
+    final AuthResponse res;
+    try {
+      res = await client.auth.signInWithPassword(
+        email: correo,
+        password: password,
+      );
+    } on AuthException catch (e) {
+      throw ErrorDeNegocio(
+        e.message.isNotEmpty
+            ? 'No pudimos iniciar sesión: ${e.message}'
+            : 'Credenciales inválidas.',
+      );
+    } catch (_) {
+      _almacen.conectadoAInternet = false;
+      throw const ErrorDeNegocio(
+        'No pudimos conectar para iniciar sesión. Revisá la conexión e intentá de nuevo.',
+      );
+    }
+    final user = res.user;
+    if (user != null && res.session != null) {
+      _almacen.conectadoAInternet = true;
+      _almacen.usuarioActualId = user.id;
+      await SincronizacionDirectaSupabase.cargarAcceso(_almacen, client);
+      // El listener de autenticación inicia PowerSync. La vía directa solo
+      // se usa si no se pudo abrir la base, sin duplicar su cola persistente.
+      if (_almacen.db == null) {
+        unawaited(
+          SincronizacionDirectaSupabase.sincronizarTodo(_almacen, client),
+        );
+        SincronizacionDirectaSupabase.suscribirRealtime(_almacen, client);
+      }
+      unawaited(ServicioNotificacionesPush.registrarTokenEnSupabase());
+      ServicioNotificacionesPush.suscribirAlertasTiempoReal();
+      return;
+    }
+    throw const ErrorDeNegocio('No pudimos iniciar sesión. Intentá de nuevo.');
   }
 
   Future<void> cerrarSesion() async {

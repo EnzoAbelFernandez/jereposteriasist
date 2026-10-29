@@ -32,7 +32,15 @@ Future<void> main() async {
     debugPrint('Error inicializando PowerSync: $e');
   }
 
-  final almacen = AlmacenLocal(db: powerSyncDb);
+  final almacen = AlmacenLocal(
+    db: powerSyncDb,
+    onSincronizarDirecto: powerSyncDb != null
+        ? null
+        : (tabla, datos) async {
+            final client = Supabase.instance.client;
+            await SincronizacionDirectaSupabase.guardar(client, tabla, datos);
+          },
+  );
   if (powerSyncDb != null) {
     await almacen.vincularPowerSync(powerSyncDb);
   }
@@ -42,31 +50,27 @@ Future<void> main() async {
     final session = Supabase.instance.client.auth.currentSession;
     if (session != null) {
       final user = session.user;
-      final nombre =
-          (user.userMetadata?['nombre'] as String?)?.trim().isNotEmpty == true
-          ? (user.userMetadata!['nombre'] as String).trim()
-          : (user.email?.split('@').first ?? 'Enzo');
-      almacen.perfiles[user.id] = Perfil(
-        id: user.id,
-        nombre: nombre,
-        rol: Rol.jefe,
-        activo: true,
-      );
-      almacen.permisos[user.id] = {
-        for (final m in Modulo.values) m: NivelPermiso.editar,
-      };
       almacen.usuarioActualId = user.id;
-
       unawaited(
-        SincronizacionDirectaSupabase.sincronizarTodo(
+        SincronizacionDirectaSupabase.cargarAcceso(
           almacen,
           Supabase.instance.client,
         ),
       );
-      SincronizacionDirectaSupabase.suscribirRealtime(
-        almacen,
-        Supabase.instance.client,
-      );
+      if (powerSyncDb == null) {
+        unawaited(
+          SincronizacionDirectaSupabase.sincronizarTodo(
+            almacen,
+            Supabase.instance.client,
+          ),
+        );
+        SincronizacionDirectaSupabase.suscribirRealtime(
+          almacen,
+          Supabase.instance.client,
+        );
+      }
+      unawaited(ServicioNotificacionesPush.registrarTokenEnSupabase());
+      ServicioNotificacionesPush.suscribirAlertasTiempoReal();
     } else {
       almacen.usuarioActualId = null;
     }

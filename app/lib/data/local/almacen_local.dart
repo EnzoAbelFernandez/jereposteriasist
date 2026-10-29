@@ -27,6 +27,7 @@ class AlmacenLocal extends ChangeNotifier {
     String? usuarioActualId,
     bool inicializarDatosBase = true,
     this.db,
+    this.onSincronizarDirecto,
   }) : _usuarioActualId = usuarioActualId ?? idJefeLocal {
     if (inicializarDatosBase) {
       _sembrarBase();
@@ -39,23 +40,22 @@ class AlmacenLocal extends ChangeNotifier {
   String generarId() => _uuid.v4();
 
   final PowerSyncDatabase? db;
+  final Future<void> Function(String tabla, Map<String, dynamic> datos)?
+  onSincronizarDirecto;
+
+  Future<void> _sincronizarDirecto(
+    String tabla,
+    Map<String, dynamic> datos,
+  ) async {
+    if (onSincronizarDirecto != null) {
+      await onSincronizarDirecto!(tabla, datos);
+    }
+  }
 
   String? _usuarioActualId;
   String? get usuarioActualId => _usuarioActualId;
   set usuarioActualId(String? valor) {
     _usuarioActualId = valor;
-    if (valor != null && !perfiles.containsKey(valor)) {
-      perfiles[valor] = Perfil(
-        id: valor,
-        nombre: valor == idJefeLocal ? 'Jere' : 'Usuario',
-        rol: Rol.jefe,
-        activo: true,
-      );
-      permisos.putIfAbsent(
-        valor,
-        () => {for (final m in Modulo.values) m: NivelPermiso.editar},
-      );
-    }
     notificar();
   }
 
@@ -139,13 +139,6 @@ class AlmacenLocal extends ChangeNotifier {
 
   /// Conecta el almacén a los streams reactivos de SQLite mediante PowerSync.
   Future<void> vincularPowerSync(PowerSyncDatabase base) async {
-    _subscriptions.add(
-      base.statusStream.listen((status) {
-        conectadoAInternet = status.connected;
-        notificar();
-      }),
-    );
-
     _subscriptions.add(
       base.watch('SELECT * FROM configuracion LIMIT 1').listen((rows) {
         if (rows.isEmpty) return;
@@ -691,6 +684,34 @@ class AlmacenLocal extends ChangeNotifier {
         }
       });
     }
+
+    await _sincronizarDirecto('insumos', {
+      'id': i.id,
+      'nombre': i.nombre,
+      'unidad': i.unidad.valor,
+      'stock_minimo': i.stockMinimo,
+      'categoria': i.categoria,
+      'notas': i.notas,
+      'archivado_en': i.archivadoEn?.toIso8601String(),
+      'creado_por': _usuarioActualId,
+      'creado_en': DateTime.now().toIso8601String(),
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
+    if (movimientoInicial != null) {
+      await _sincronizarDirecto('movimientos_stock', {
+        'id': movimientoInicial.id,
+        'insumo_id': movimientoInicial.insumoId,
+        'fecha': movimientoInicial.fecha.toIso8601String(),
+        'cantidad': movimientoInicial.cantidad,
+        'tipo': movimientoInicial.tipo.valor,
+        'compra_id': movimientoInicial.compraId,
+        'produccion_id': movimientoInicial.produccionId,
+        'anula_id': movimientoInicial.anulaId,
+        'nota': movimientoInicial.nota,
+        'creado_por': movimientoInicial.creadoPor ?? _usuarioActualId,
+        'creado_en': DateTime.now().toIso8601String(),
+      });
+    }
   }
 
   Future<void> persistirMovimientoStock(MovimientoStock m) async {
@@ -720,12 +741,23 @@ class AlmacenLocal extends ChangeNotifier {
         ],
       );
     }
+
+    await _sincronizarDirecto('movimientos_stock', {
+      'id': m.id,
+      'insumo_id': m.insumoId,
+      'fecha': m.fecha.toIso8601String(),
+      'cantidad': m.cantidad,
+      'tipo': m.tipo.valor,
+      'compra_id': m.compraId,
+      'produccion_id': m.produccionId,
+      'anula_id': m.anulaId,
+      'nota': m.nota,
+      'creado_por': m.creadoPor ?? _usuarioActualId,
+      'creado_en': DateTime.now().toIso8601String(),
+    });
   }
 
   Future<void> persistirCliente(Cliente c) async {
-    clientes[c.id] = c;
-    notificar();
-
     if (db != null) {
       await db!.execute(
         '''
@@ -756,6 +788,28 @@ class AlmacenLocal extends ChangeNotifier {
         ],
       );
     }
+
+    await _sincronizarDirecto('clientes', {
+      'id': c.id,
+      'nombre': c.nombre,
+      'telefono': c.telefono,
+      'email': c.email,
+      'direccion': c.direccion,
+      'cumple_dia': c.cumpleDia,
+      'cumple_mes': c.cumpleMes,
+      'cumple_anio': c.cumpleAnio,
+      'preferencias': c.preferencias,
+      'alergias': c.alergias,
+      'notas': c.notas,
+      'habitual_modo': c.habitualModo.valor,
+      'habitual_auto': c.habitualAuto,
+      'archivado_en': c.archivadoEn?.toIso8601String(),
+      'creado_por': _usuarioActualId,
+      'creado_en': c.creadoEn.toIso8601String(),
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
+    clientes[c.id] = c;
+    notificar();
   }
 
   Future<void> persistirProveedor(Proveedor p) async {
@@ -782,6 +836,18 @@ class AlmacenLocal extends ChangeNotifier {
         ],
       );
     }
+
+    await _sincronizarDirecto('proveedores', {
+      'id': p.id,
+      'nombre': p.nombre,
+      'telefono': p.telefono,
+      'email': p.email,
+      'notas': p.notas,
+      'archivado_en': p.archivadoEn?.toIso8601String(),
+      'creado_por': _usuarioActualId,
+      'creado_en': DateTime.now().toIso8601String(),
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
   }
 
   Future<void> persistirProducto(Producto p) async {
@@ -808,6 +874,18 @@ class AlmacenLocal extends ChangeNotifier {
         ],
       );
     }
+
+    await _sincronizarDirecto('productos', {
+      'id': p.id,
+      'nombre': p.nombre,
+      'categoria': p.categoria.valor,
+      'precio_base_centavos': p.precioBase?.centavos,
+      'descripcion': p.descripcion,
+      'archivado_en': p.archivadoEn?.toIso8601String(),
+      'creado_por': _usuarioActualId,
+      'creado_en': DateTime.now().toIso8601String(),
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
   }
 
   Future<void> persistirReceta(Receta r, List<RecetaItem> items) async {
@@ -855,6 +933,29 @@ class AlmacenLocal extends ChangeNotifier {
             ],
           );
         }
+      });
+    }
+
+    await _sincronizarDirecto('recetas', {
+      'id': r.id,
+      'nombre': r.nombre,
+      'producto_id': r.productoId,
+      'rinde_cantidad': r.rindeCantidad,
+      'rinde_descripcion': r.rindeDescripcion,
+      'notas': r.notas,
+      'archivado_en': r.archivadoEn?.toIso8601String(),
+      'creado_por': _usuarioActualId,
+      'creado_en': DateTime.now().toIso8601String(),
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
+    for (final item in items) {
+      await _sincronizarDirecto('receta_items', {
+        'id': item.id,
+        'receta_id': item.recetaId,
+        'insumo_id': item.insumoId,
+        'cantidad': item.cantidad,
+        'creado_en': DateTime.now().toIso8601String(),
+        'actualizado_en': DateTime.now().toIso8601String(),
       });
     }
   }
@@ -951,6 +1052,55 @@ class AlmacenLocal extends ChangeNotifier {
             ],
           );
         }
+      });
+    }
+
+    await _sincronizarDirecto('pedidos', {
+      'id': p.id,
+      'cliente_id': p.clienteId,
+      'fecha_entrega': p.fechaEntrega.toIso8601String(),
+      'tipo_entrega': p.tipoEntrega.valor,
+      'direccion_entrega': p.direccionEntrega,
+      'estado': p.estado.valor,
+      'descuento_centavos': p.descuento.centavos,
+      'motivo_descuento': p.motivoDescuento,
+      'notas': p.notas,
+      'entregado_en': p.entregadoEn?.toIso8601String(),
+      'cancelado_en': p.canceladoEn?.toIso8601String(),
+      'motivo_cancelacion': p.motivoCancelacion,
+      'creado_por': _usuarioActualId,
+      'creado_en': p.creadoEn.toIso8601String(),
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
+    for (final item in items) {
+      await _sincronizarDirecto('pedido_items', {
+        'id': item.id,
+        'pedido_id': item.pedidoId,
+        'producto_id': item.productoId,
+        'descripcion': item.descripcion,
+        'cantidad': item.cantidad,
+        'precio_unitario_centavos': item.precioUnitario.centavos,
+        'notas': item.notas,
+        'orden': item.orden,
+        'creado_en': DateTime.now().toIso8601String(),
+        'actualizado_en': DateTime.now().toIso8601String(),
+      });
+    }
+    if (sena != null) {
+      await _sincronizarDirecto('movimientos_caja', {
+        'id': sena.id,
+        'fecha': sena.fecha.toIso8601String(),
+        'tipo': sena.tipo.valor,
+        'monto_centavos': sena.monto.centavos,
+        'medio_pago': sena.medioPago.valor,
+        'concepto': sena.concepto.valor,
+        'descripcion': sena.descripcion,
+        'pedido_id': sena.pedidoId,
+        'compra_id': sena.compraId,
+        'gasto_id': sena.gastoId,
+        'anula_id': sena.anulaId,
+        'creado_por': sena.creadoPor ?? _usuarioActualId,
+        'creado_en': DateTime.now().toIso8601String(),
       });
     }
   }
@@ -1056,6 +1206,60 @@ class AlmacenLocal extends ChangeNotifier {
         );
       });
     }
+
+    await _sincronizarDirecto('compras', {
+      'id': c.id,
+      'proveedor_id': c.proveedorId,
+      'fecha': c.fecha.toIso8601String(),
+      'medio_pago': c.medioPago.valor,
+      'estado': c.estado.valor,
+      'anulado_en': c.anuladoEn?.toIso8601String(),
+      'motivo_anulacion': c.motivoAnulacion,
+      'notas': c.notas,
+      'creado_por': c.creadoPor ?? _usuarioActualId,
+      'creado_en': DateTime.now().toIso8601String(),
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
+    for (final item in items) {
+      await _sincronizarDirecto('compra_items', {
+        'id': item.id,
+        'compra_id': item.compraId,
+        'insumo_id': item.insumoId,
+        'cantidad': item.cantidad,
+        'precio_total_centavos': item.precioTotal.centavos,
+        'creado_en': DateTime.now().toIso8601String(),
+      });
+    }
+    for (final m in movsStock) {
+      await _sincronizarDirecto('movimientos_stock', {
+        'id': m.id,
+        'insumo_id': m.insumoId,
+        'fecha': m.fecha.toIso8601String(),
+        'cantidad': m.cantidad,
+        'tipo': m.tipo.valor,
+        'compra_id': m.compraId,
+        'produccion_id': m.produccionId,
+        'anula_id': m.anulaId,
+        'nota': m.nota,
+        'creado_por': m.creadoPor ?? _usuarioActualId,
+        'creado_en': DateTime.now().toIso8601String(),
+      });
+    }
+    await _sincronizarDirecto('movimientos_caja', {
+      'id': movCaja.id,
+      'fecha': movCaja.fecha.toIso8601String(),
+      'tipo': movCaja.tipo.valor,
+      'monto_centavos': movCaja.monto.centavos,
+      'medio_pago': movCaja.medioPago.valor,
+      'concepto': movCaja.concepto.valor,
+      'descripcion': movCaja.descripcion,
+      'pedido_id': movCaja.pedidoId,
+      'compra_id': movCaja.compraId,
+      'gasto_id': movCaja.gastoId,
+      'anula_id': movCaja.anulaId,
+      'creado_por': movCaja.creadoPor ?? _usuarioActualId,
+      'creado_en': DateTime.now().toIso8601String(),
+    });
   }
 
   Future<void> persistirAnulacionCompra(
@@ -1133,6 +1337,50 @@ class AlmacenLocal extends ChangeNotifier {
         );
       });
     }
+
+    await _sincronizarDirecto('compras', {
+      'id': c.id,
+      'proveedor_id': c.proveedorId,
+      'fecha': c.fecha.toIso8601String(),
+      'medio_pago': c.medioPago.valor,
+      'estado': c.estado.valor,
+      'anulado_en': c.anuladoEn?.toIso8601String(),
+      'motivo_anulacion': c.motivoAnulacion,
+      'notas': c.notas,
+      'creado_por': c.creadoPor ?? _usuarioActualId,
+      'creado_en': c.fecha.toIso8601String(),
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
+    for (final m in contraMovs) {
+      await _sincronizarDirecto('movimientos_stock', {
+        'id': m.id,
+        'insumo_id': m.insumoId,
+        'fecha': m.fecha.toIso8601String(),
+        'cantidad': m.cantidad,
+        'tipo': m.tipo.valor,
+        'compra_id': m.compraId,
+        'produccion_id': m.produccionId,
+        'anula_id': m.anulaId,
+        'nota': m.nota,
+        'creado_por': m.creadoPor ?? _usuarioActualId,
+        'creado_en': DateTime.now().toIso8601String(),
+      });
+    }
+    await _sincronizarDirecto('movimientos_caja', {
+      'id': contraCaja.id,
+      'fecha': contraCaja.fecha.toIso8601String(),
+      'tipo': contraCaja.tipo.valor,
+      'monto_centavos': contraCaja.monto.centavos,
+      'medio_pago': contraCaja.medioPago.valor,
+      'concepto': contraCaja.concepto.valor,
+      'descripcion': contraCaja.descripcion,
+      'pedido_id': contraCaja.pedidoId,
+      'compra_id': contraCaja.compraId,
+      'gasto_id': contraCaja.gastoId,
+      'anula_id': contraCaja.anulaId,
+      'creado_por': contraCaja.creadoPor ?? _usuarioActualId,
+      'creado_en': DateTime.now().toIso8601String(),
+    });
   }
 
   Future<void> persistirGasto(Gasto g, MovimientoCaja movCaja) async {
@@ -1190,6 +1438,37 @@ class AlmacenLocal extends ChangeNotifier {
         );
       });
     }
+
+    await _sincronizarDirecto('gastos', {
+      'id': g.id,
+      'fecha': g.fecha.toIso8601String(),
+      'categoria_id': g.categoriaId,
+      'descripcion': g.descripcion,
+      'monto_centavos': g.monto.centavos,
+      'medio_pago': g.medioPago.valor,
+      'estado': g.estado.valor,
+      'anulado_en': g.anuladoEn?.toIso8601String(),
+      'motivo_anulacion': g.motivoAnulacion,
+      'notas': g.notas,
+      'creado_por': _usuarioActualId,
+      'creado_en': DateTime.now().toIso8601String(),
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
+    await _sincronizarDirecto('movimientos_caja', {
+      'id': movCaja.id,
+      'fecha': movCaja.fecha.toIso8601String(),
+      'tipo': movCaja.tipo.valor,
+      'monto_centavos': movCaja.monto.centavos,
+      'medio_pago': movCaja.medioPago.valor,
+      'concepto': movCaja.concepto.valor,
+      'descripcion': movCaja.descripcion,
+      'pedido_id': movCaja.pedidoId,
+      'compra_id': movCaja.compraId,
+      'gasto_id': movCaja.gastoId,
+      'anula_id': movCaja.anulaId,
+      'creado_por': movCaja.creadoPor ?? _usuarioActualId,
+      'creado_en': DateTime.now().toIso8601String(),
+    });
   }
 
   Future<void> persistirAnulacionGasto(
@@ -1240,6 +1519,37 @@ class AlmacenLocal extends ChangeNotifier {
         );
       });
     }
+
+    await _sincronizarDirecto('gastos', {
+      'id': g.id,
+      'fecha': g.fecha.toIso8601String(),
+      'categoria_id': g.categoriaId,
+      'descripcion': g.descripcion,
+      'monto_centavos': g.monto.centavos,
+      'medio_pago': g.medioPago.valor,
+      'estado': g.estado.valor,
+      'anulado_en': g.anuladoEn?.toIso8601String(),
+      'motivo_anulacion': g.motivoAnulacion,
+      'notas': g.notas,
+      'creado_por': _usuarioActualId,
+      'creado_en': g.fecha.toIso8601String(),
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
+    await _sincronizarDirecto('movimientos_caja', {
+      'id': contraCaja.id,
+      'fecha': contraCaja.fecha.toIso8601String(),
+      'tipo': contraCaja.tipo.valor,
+      'monto_centavos': contraCaja.monto.centavos,
+      'medio_pago': contraCaja.medioPago.valor,
+      'concepto': contraCaja.concepto.valor,
+      'descripcion': contraCaja.descripcion,
+      'pedido_id': contraCaja.pedidoId,
+      'compra_id': contraCaja.compraId,
+      'gasto_id': contraCaja.gastoId,
+      'anula_id': contraCaja.anulaId,
+      'creado_por': contraCaja.creadoPor ?? _usuarioActualId,
+      'creado_en': DateTime.now().toIso8601String(),
+    });
   }
 
   Future<void> persistirCategoriaGasto(CategoriaGasto cat) async {
@@ -1263,19 +1573,21 @@ class AlmacenLocal extends ChangeNotifier {
         ],
       );
     }
+
+    await _sincronizarDirecto('categorias_gasto', {
+      'id': cat.id,
+      'nombre': cat.nombre,
+      'archivado_en': cat.archivadoEn?.toIso8601String(),
+      'creado_por': _usuarioActualId,
+      'creado_en': DateTime.now().toIso8601String(),
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
   }
 
   Future<void> persistirProduccion(
     Produccion p,
     List<MovimientoStock> movs,
   ) async {
-    producciones[p.id] = p;
-    for (final m in movs) {
-      movimientosStock[m.id] = m;
-      evaluarAlertaStockBajo(m.insumoId);
-    }
-    notificar();
-
     if (db != null) {
       await db!.writeTransaction((tx) async {
         await tx.execute(
@@ -1326,6 +1638,44 @@ class AlmacenLocal extends ChangeNotifier {
         }
       });
     }
+
+    await _sincronizarDirecto('producciones', {
+      'id': p.id,
+      'fecha': p.fecha.toIso8601String(),
+      'producto_id': p.productoId,
+      'descripcion': p.descripcion,
+      'cantidad': p.cantidad,
+      'pedido_id': p.pedidoId,
+      'receta_id': p.recetaId,
+      'estado': p.estado.valor,
+      'anulado_en': p.anuladoEn?.toIso8601String(),
+      'motivo_anulacion': p.motivoAnulacion,
+      'notas': p.notas,
+      'creado_por': _usuarioActualId,
+      'creado_en': DateTime.now().toIso8601String(),
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
+    for (final m in movs) {
+      await _sincronizarDirecto('movimientos_stock', {
+        'id': m.id,
+        'insumo_id': m.insumoId,
+        'fecha': m.fecha.toIso8601String(),
+        'cantidad': m.cantidad,
+        'tipo': m.tipo.valor,
+        'compra_id': m.compraId,
+        'produccion_id': m.produccionId,
+        'anula_id': m.anulaId,
+        'nota': m.nota,
+        'creado_por': m.creadoPor ?? _usuarioActualId,
+        'creado_en': DateTime.now().toIso8601String(),
+      });
+    }
+    producciones[p.id] = p;
+    for (final m in movs) {
+      movimientosStock[m.id] = m;
+      evaluarAlertaStockBajo(m.insumoId);
+    }
+    notificar();
   }
 
   Future<void> persistirAnulacionProduccion(
@@ -1378,6 +1728,38 @@ class AlmacenLocal extends ChangeNotifier {
         }
       });
     }
+
+    await _sincronizarDirecto('producciones', {
+      'id': p.id,
+      'fecha': p.fecha.toIso8601String(),
+      'producto_id': p.productoId,
+      'descripcion': p.descripcion,
+      'cantidad': p.cantidad,
+      'pedido_id': p.pedidoId,
+      'receta_id': p.recetaId,
+      'estado': p.estado.valor,
+      'anulado_en': p.anuladoEn?.toIso8601String(),
+      'motivo_anulacion': p.motivoAnulacion,
+      'notas': p.notas,
+      'creado_por': _usuarioActualId,
+      'creado_en': p.fecha.toIso8601String(),
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
+    for (final m in contraMovs) {
+      await _sincronizarDirecto('movimientos_stock', {
+        'id': m.id,
+        'insumo_id': m.insumoId,
+        'fecha': m.fecha.toIso8601String(),
+        'cantidad': m.cantidad,
+        'tipo': m.tipo.valor,
+        'compra_id': m.compraId,
+        'produccion_id': m.produccionId,
+        'anula_id': m.anulaId,
+        'nota': m.nota,
+        'creado_por': m.creadoPor ?? _usuarioActualId,
+        'creado_en': DateTime.now().toIso8601String(),
+      });
+    }
   }
 
   Future<void> persistirMovimientoCaja(MovimientoCaja m) async {
@@ -1409,6 +1791,22 @@ class AlmacenLocal extends ChangeNotifier {
         ],
       );
     }
+
+    await _sincronizarDirecto('movimientos_caja', {
+      'id': m.id,
+      'fecha': m.fecha.toIso8601String(),
+      'tipo': m.tipo.valor,
+      'monto_centavos': m.monto.centavos,
+      'medio_pago': m.medioPago.valor,
+      'concepto': m.concepto.valor,
+      'descripcion': m.descripcion,
+      'pedido_id': m.pedidoId,
+      'compra_id': m.compraId,
+      'gasto_id': m.gastoId,
+      'anula_id': m.anulaId,
+      'creado_por': m.creadoPor ?? _usuarioActualId,
+      'creado_en': DateTime.now().toIso8601String(),
+    });
   }
 
   Future<void> persistirTarea(Tarea t) async {
@@ -1440,35 +1838,45 @@ class AlmacenLocal extends ChangeNotifier {
         ],
       );
     }
+
+    await _sincronizarDirecto('tareas', {
+      'id': t.id,
+      'titulo': t.titulo,
+      'descripcion': t.descripcion,
+      'tipo': t.tipo.valor,
+      'prioridad': t.prioridad.valor,
+      'estado': t.estado.valor,
+      'asignado_a': t.asignadoA,
+      'fecha_vencimiento': t.fechaVencimiento?.toIso8601String(),
+      'pedido_id': t.pedidoId,
+      'completada_en': t.completadaEn?.toIso8601String(),
+      'creado_por': t.creadoPor ?? _usuarioActualId,
+      'creado_en': t.creadoEn.toIso8601String(),
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
   }
 
   Future<void> persistirAlerta(Alerta a) async {
+    // Las alertas locales de stock son avisos derivados, no registros del
+    // servidor. El servidor crea sus propias alertas al recibir movimientos.
+    if (a.id.startsWith('stock_bajo:')) {
+      alertas[a.id] = a;
+      notificar();
+      return;
+    }
+    if (db != null) {
+      await db!.execute('UPDATE alertas SET leida_en = ? WHERE id = ?', [
+        a.leidaEn?.toIso8601String(),
+        a.id,
+      ]);
+    } else {
+      await _sincronizarDirecto('alertas', {
+        'id': a.id,
+        'leida_en': a.leidaEn?.toIso8601String(),
+      });
+    }
     alertas[a.id] = a;
     notificar();
-
-    if (db != null) {
-      await db!.execute(
-        '''
-        INSERT OR REPLACE INTO alertas (
-          id, destinatario_id, tipo, titulo, mensaje, entidad_tipo, entidad_id,
-          clave, leida_en, push_enviada_en, creado_en
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''',
-        [
-          a.id,
-          _usuarioActualId,
-          a.tipo.valor,
-          a.titulo,
-          a.mensaje,
-          a.entidadTipo,
-          a.entidadId,
-          a.id,
-          a.leidaEn?.toIso8601String(),
-          null,
-          a.creadoEn.toIso8601String(),
-        ],
-      );
-    }
   }
 
   Future<void> persistirConfiguracion(Configuracion c) async {
@@ -1496,6 +1904,17 @@ class AlmacenLocal extends ChangeNotifier {
         ],
       );
     }
+
+    await _sincronizarDirecto('configuracion', {
+      'id': 'configuracion_principal',
+      'unica': 'si',
+      'nombre_negocio': c.nombreNegocio,
+      'dias_aviso_cumple': c.diasAvisoCumple,
+      'aviso_cumple_alcance': c.avisoCumpleAlcance.valor,
+      'habitual_min_pedidos': c.habitualMinPedidos,
+      'habitual_meses': c.habitualMeses,
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
   }
 
   Future<void> persistirPermisos(
@@ -1523,6 +1942,17 @@ class AlmacenLocal extends ChangeNotifier {
             ],
           );
         }
+      });
+    }
+
+    for (final entry in nuevos.entries) {
+      final id = '$perfilId:${entry.key.valor}';
+      await _sincronizarDirecto('permisos', {
+        'id': id,
+        'perfil_id': perfilId,
+        'modulo': entry.key.valor,
+        'nivel': entry.value.valor,
+        'actualizado_en': DateTime.now().toIso8601String(),
       });
     }
   }
