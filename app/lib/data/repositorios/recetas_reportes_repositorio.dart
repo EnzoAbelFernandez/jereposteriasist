@@ -5,6 +5,7 @@ import 'package:jereposteria/compartido/tipos/enums.dart';
 import 'package:jereposteria/compartido/tipos/errores.dart';
 import 'package:jereposteria/compartido/tipos/unidad.dart';
 import 'package:jereposteria/data/local/almacen_local.dart';
+import 'package:jereposteria/data/modelos/stock_modelos.dart';
 import 'package:jereposteria/data/modelos/recetas_reportes_modelos.dart';
 
 abstract class RecetasRepositorio {
@@ -36,6 +37,16 @@ Dinero? _estimarCostoInsumo(
   int cantidad,
 ) {
   if (cantidad <= 0) return Dinero.cero;
+  final insumo = almacen.insumos[insumoId];
+  if (insumo == null) return null;
+  if (insumo.fuenteCosto == FuenteCostoInsumo.referencia) {
+    final precio = insumo.precioReferencia;
+    final presentacion = insumo.cantidadReferencia;
+    if (precio == null || presentacion == null || presentacion <= 0) {
+      return null;
+    }
+    return Dinero((precio.centavos * cantidad) ~/ presentacion);
+  }
   DateTime? mejorFecha;
   int? ultimoCentavos;
   int? ultimaCantidad;

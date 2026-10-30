@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Registrate | Jesica Ezquer Repostería</title>
+<meta name="description" content="Registrate como cliente y dejanos tus datos.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Registrate | Jesica Ezquer Repostería">
+<meta property="og:description" content="Registrate como cliente y dejanos tus datos.">
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#4f3638;background:#f7f0eb}*{box-sizing:border-box}body{margin:0;min-height:100svh;display:grid;place-items:center;padding:28px 16px;background:radial-gradient(ellipse at 10% 5%,#f9dedd,transparent 36%),radial-gradient(ellipse at 100% 90%,#eddbcc,transparent 38%),#faf6f2}.card{background:#fffdfb;width:min(100%,470px);padding:38px 36px 30px;border:1px solid #f0e3dc;border-radius:26px;box-shadow:0 20px 65px #7956551a}.brand{color:#a2646d;font-size:11px;letter-spacing:.16em;font-weight:800;text-transform:uppercase}.ornament{color:#c07b83;margin-bottom:18px;font-size:26px}h1{font-family:Georgia,serif;font-weight:400;font-size:36px;letter-spacing:-.025em;line-height:1.1;margin:13px 0}p{line-height:1.5;color:#796565;font-size:15px}.intro{margin:0 0 26px}.rule{border:0;border-top:1px solid #f0e5e1;margin:23px 0}label,.legend{display:block;font-size:14px;font-weight:700;margin:18px 0 8px}.hint{font-size:13px;color:#887575;margin:0 0 10px}input,select{width:100%;height:49px;padding:0 13px;border:1px solid #dfcfca;border-radius:10px;font:inherit;color:#493b3b;background:#fff}input::placeholder{color:#aa9995}input:focus,select:focus{outline:2px solid #c5848b;outline-offset:2px}.grid{display:grid;grid-template-columns:1fr 1.5fr;gap:12px}.grid label{margin:0 0 8px;font-size:13px}.grid select{appearance:auto}button{margin-top:25px;border:0;border-radius:11px;padding:15px;width:100%;background:#a45966;color:white;font:inherit;font-weight:700}button:disabled{opacity:.55;cursor:not-allowed}.notice{font-size:12px;color:#887575;text-align:center;margin:14px 0 0}footer{text-align:center;margin-top:24px;font-family:Georgia,serif;color:#b17c80;font-size:14px}@media(max-width:420px){.card{padding:30px 24px}h1{font-size:32px}}
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="ornament" aria-hidden="true">✿</div>
+  <div class="brand">Jesica Ezquer Repostería</div>
+  <h1>¡Qué lindo tenerte acá!</h1>
+  <p class="intro">Completá tus datos para registrarte como cliente.</p>
+  <form>
+    <label for="nombre">Nombre y apellido</label>
+    <input id="nombre" name="nombre" required autocomplete="name" maxlength="120" placeholder="Tu nombre completo">
+    <label for="telefono">Número de WhatsApp</label>
+    <input id="telefono" name="telefono" required type="tel" autocomplete="tel" maxlength="30" placeholder="Ej. 381 123 4567">
+    <hr class="rule">
+    <div class="legend">¿Cuándo es tu cumpleaños?</div>
+    <div class="grid">
+      <div><label for="dia">Día</label><select id="dia" name="dia" required><option value="">Elegí el día</option></select></div>
+      <div><label for="mes">Mes</label><select id="mes" name="mes" required><option value="">Elegí el mes</option><option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option></select></div>
+    </div>
+    <div aria-hidden="true" style="position:absolute;left:-10000px"><label for="sitio">Sitio web</label><input id="sitio" name="sitio" tabindex="-1" autocomplete="off"></div>
+    <button type="submit">Registrarme</button>
+    <p class="notice" id="resultado" role="status" aria-live="polite"></p>
+  </form>
+</main>
+<script>
+const dia = document.getElementById('dia');
+const mes = document.getElementById('mes');
+function actualizarDias() {
+  const anterior = dia.value;
+  const limite = mes.value ? new Date(2024, Number(mes.value), 0).getDate() : 31;
+  dia.replaceChildren(new Option('Elegí el día', ''));
+  for (let n = 1; n <= limite; n++) dia.add(new Option(String(n), String(n)));
+  if (Number(anterior) <= limite) dia.value = anterior;
+}
+mes.addEventListener('change', actualizarDias);
+actualizarDias();
+const form = document.querySelector('form');
+const resultado = document.getElementById('resultado');
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!form.reportValidity()) return;
+  const telefono = document.getElementById('telefono').value.replace(/\D/g, '');
+  if (telefono.length < 8 || telefono.length > 15) {
+    resultado.textContent = 'Revisá tu número de WhatsApp e incluí el código de área.';
+    return;
+  }
+  const boton = form.querySelector('button');
+  boton.disabled = true;
+  boton.textContent = 'Enviando…';
+  resultado.textContent = '';
+  try {
+    const res = await fetch('https://fovvgqurnztnjcibtopq.supabase.co/rest/v1/rpc/registrar_cliente_publico', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'apikey': 'sb_publishable__OLs173ROXP4ETaNzA4EKQ_1fYYxUxo'},
+      body: JSON.stringify({p_nombre: document.getElementById('nombre').value.trim(), p_telefono: telefono, p_dia: Number(dia.value), p_mes: Number(mes.value), p_sitio: document.getElementById('sitio').value})
+    });
+    if (!res.ok) throw new Error('No se pudo enviar');
+    form.reset(); actualizarDias();
+    resultado.textContent = '¡Gracias! Recibimos tus datos.';
+  } catch (_) {
+    resultado.textContent = 'No pudimos enviar tus datos. Revisá tu conexión y volvé a intentar.';
+  } finally {
+    boton.disabled = false; boton.textContent = 'Registrarme';
+  }
+});
+</script>
+</body>
+</html>

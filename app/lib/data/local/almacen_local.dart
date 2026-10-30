@@ -193,6 +193,13 @@ class AlmacenLocal extends ChangeNotifier {
             nombre: r['nombre'] as String,
             unidad: Unidad.desdeValor(r['unidad'] as String),
             stockMinimo: (r['stock_minimo'] as num?)?.toInt() ?? 0,
+            precioReferencia: r['precio_referencia_centavos'] == null
+                ? null
+                : Dinero((r['precio_referencia_centavos'] as num).toInt()),
+            cantidadReferencia: (r['cantidad_referencia'] as num?)?.toInt(),
+            fuenteCosto: FuenteCostoInsumo.desdeValor(
+              r['fuente_costo'] as String?,
+            ),
             categoria: r['categoria'] as String?,
             notas: r['notas'] as String?,
             archivadoEn: r['archivado_en'] != null
@@ -644,8 +651,8 @@ class AlmacenLocal extends ChangeNotifier {
         await tx.execute(
           '''
           INSERT OR REPLACE INTO insumos (
-            id, nombre, unidad, stock_minimo, categoria, notas, archivado_en, creado_por, creado_en, actualizado_en
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            id, nombre, unidad, stock_minimo, categoria, notas, archivado_en, creado_por, creado_en, actualizado_en, precio_referencia_centavos, cantidad_referencia, fuente_costo
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           ''',
           [
             i.id,
@@ -658,6 +665,9 @@ class AlmacenLocal extends ChangeNotifier {
             _usuarioActualId,
             DateTime.now().toIso8601String(),
             DateTime.now().toIso8601String(),
+            i.precioReferencia?.centavos,
+            i.cantidadReferencia,
+            i.fuenteCosto.valor,
           ],
         );
         if (movimientoInicial != null) {
@@ -690,6 +700,9 @@ class AlmacenLocal extends ChangeNotifier {
       'nombre': i.nombre,
       'unidad': i.unidad.valor,
       'stock_minimo': i.stockMinimo,
+      'precio_referencia_centavos': i.precioReferencia?.centavos,
+      'cantidad_referencia': i.cantidadReferencia,
+      'fuente_costo': i.fuenteCosto.valor,
       'categoria': i.categoria,
       'notas': i.notas,
       'archivado_en': i.archivadoEn?.toIso8601String(),

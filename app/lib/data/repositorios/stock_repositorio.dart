@@ -110,6 +110,15 @@ class _InsumosRepositorioLocal implements InsumosRepositorio {
 
   @override
   Future<String> crear(InsumoDatos datos, {int stockInicial = 0}) async {
+    if ((datos.precioReferencia == null) !=
+            (datos.cantidadReferencia == null) ||
+        (datos.precioReferencia != null &&
+            !datos.precioReferencia!.esPositivo) ||
+        (datos.cantidadReferencia != null && datos.cantidadReferencia! <= 0)) {
+      throw const ErrorDeNegocio(
+        'Ingresá el precio y la cantidad de referencia, ambos mayores a cero.',
+      );
+    }
     if (datos.nombre.trim().isEmpty) {
       throw const ErrorDeNegocio('El nombre del insumo es obligatorio.');
     }
@@ -122,6 +131,9 @@ class _InsumosRepositorioLocal implements InsumosRepositorio {
       nombre: datos.nombre.trim(),
       unidad: datos.unidad,
       stockMinimo: datos.stockMinimo,
+      precioReferencia: datos.precioReferencia,
+      cantidadReferencia: datos.cantidadReferencia,
+      fuenteCosto: datos.fuenteCosto,
       categoria: _limpiar(datos.categoria),
       notas: _limpiar(datos.notas),
     );
@@ -144,6 +156,15 @@ class _InsumosRepositorioLocal implements InsumosRepositorio {
 
   @override
   Future<void> actualizar(String id, InsumoDatos datos) async {
+    if ((datos.precioReferencia == null) !=
+            (datos.cantidadReferencia == null) ||
+        (datos.precioReferencia != null &&
+            !datos.precioReferencia!.esPositivo) ||
+        (datos.cantidadReferencia != null && datos.cantidadReferencia! <= 0)) {
+      throw const ErrorDeNegocio(
+        'Ingresá el precio y la cantidad de referencia, ambos mayores a cero.',
+      );
+    }
     if (datos.nombre.trim().isEmpty) {
       throw const ErrorDeNegocio('El nombre del insumo es obligatorio.');
     }
@@ -166,6 +187,9 @@ class _InsumosRepositorioLocal implements InsumosRepositorio {
       nombre: datos.nombre.trim(),
       unidad: datos.unidad,
       stockMinimo: datos.stockMinimo,
+      precioReferencia: datos.precioReferencia,
+      cantidadReferencia: datos.cantidadReferencia,
+      fuenteCosto: datos.fuenteCosto,
       categoria: _limpiar(datos.categoria),
       notas: _limpiar(datos.notas),
       archivadoEn: actual.archivadoEn,
@@ -182,6 +206,9 @@ class _InsumosRepositorioLocal implements InsumosRepositorio {
       nombre: i.nombre,
       unidad: i.unidad,
       stockMinimo: i.stockMinimo,
+      precioReferencia: i.precioReferencia,
+      cantidadReferencia: i.cantidadReferencia,
+      fuenteCosto: i.fuenteCosto,
       categoria: i.categoria,
       notas: i.notas,
       archivadoEn: DateTime.now(),

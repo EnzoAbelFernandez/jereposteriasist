@@ -1,6 +1,19 @@
 import 'package:flutter/foundation.dart';
 import 'package:jereposteria/compartido/tipos/enums.dart';
+import 'package:jereposteria/compartido/tipos/dinero.dart';
 import 'package:jereposteria/compartido/tipos/unidad.dart';
+
+enum FuenteCostoInsumo {
+  ultimaCompra('ultima_compra', 'Última compra'),
+  referencia('referencia', 'Precio de referencia');
+
+  const FuenteCostoInsumo(this.valor, this.etiqueta);
+  final String valor;
+  final String etiqueta;
+
+  static FuenteCostoInsumo desdeValor(String? valor) =>
+      valor == 'referencia' ? referencia : ultimaCompra;
+}
 
 @immutable
 class Insumo {
@@ -9,6 +22,9 @@ class Insumo {
     required this.nombre,
     required this.unidad,
     this.stockMinimo = 0,
+    this.precioReferencia,
+    this.cantidadReferencia,
+    this.fuenteCosto = FuenteCostoInsumo.ultimaCompra,
     this.categoria,
     this.notas,
     this.archivadoEn,
@@ -18,6 +34,9 @@ class Insumo {
   final String nombre;
   final Unidad unidad;
   final int stockMinimo;
+  final Dinero? precioReferencia;
+  final int? cantidadReferencia;
+  final FuenteCostoInsumo fuenteCosto;
   final String? categoria;
   final String? notas;
   final DateTime? archivadoEn;
@@ -47,6 +66,9 @@ class InsumoDatos {
     required this.nombre,
     required this.unidad,
     this.stockMinimo = 0,
+    this.precioReferencia,
+    this.cantidadReferencia,
+    this.fuenteCosto = FuenteCostoInsumo.ultimaCompra,
     this.categoria,
     this.notas,
   });
@@ -55,6 +77,9 @@ class InsumoDatos {
     nombre: i.nombre,
     unidad: i.unidad,
     stockMinimo: i.stockMinimo,
+    precioReferencia: i.precioReferencia,
+    cantidadReferencia: i.cantidadReferencia,
+    fuenteCosto: i.fuenteCosto,
     categoria: i.categoria,
     notas: i.notas,
   );
@@ -62,6 +87,9 @@ class InsumoDatos {
   final String nombre;
   final Unidad unidad;
   final int stockMinimo;
+  final Dinero? precioReferencia;
+  final int? cantidadReferencia;
+  final FuenteCostoInsumo fuenteCosto;
   final String? categoria;
   final String? notas;
 }

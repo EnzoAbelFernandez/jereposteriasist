@@ -124,6 +124,65 @@ void main() {
       expect(trasOverride?.esHabitual, isFalse);
     });
 
+    test(
+      'La fuente elegida determina el costo sin alterar stock o caja',
+      () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final insumos = container.read(insumosRepositorioProvider);
+        final recetas = container.read(recetasRepositorioProvider);
+        final compras = container.read(comprasRepositorioProvider);
+        final almacen = container.read(almacenLocalProvider);
+        final id = await insumos.crear(
+          InsumoDatos(
+            nombre: 'Azúcar de referencia',
+            unidad: Unidad.gramos,
+            precioReferencia: Dinero.pesos(930),
+            cantidadReferencia: 1000,
+            fuenteCosto: FuenteCostoInsumo.referencia,
+          ),
+        );
+        final recetaId = await recetas.crear(
+          RecetaDatos(
+            nombre: 'Receta',
+            rindeCantidad: 1,
+            items: [RecetaItemDatos(insumoId: id, cantidad: 540)],
+          ),
+        );
+        final inicial = await recetas.observarDetalle(recetaId).first;
+        expect(inicial!.items.single.costoEstimado, const Dinero(50220));
+        expect(almacen.stockDe(id), 0);
+        expect(almacen.movimientosCaja, isEmpty);
+        await compras.registrar(
+          CompraDatos(
+            fecha: DateTime.now(),
+            medioPago: MedioPago.efectivo,
+            items: [
+              CompraItemDatos(
+                insumoId: id,
+                cantidad: 1000,
+                precioTotal: Dinero.pesos(2000),
+              ),
+            ],
+          ),
+        );
+        final trasCompra = await recetas.observarDetalle(recetaId).first;
+        expect(trasCompra!.items.single.costoEstimado, const Dinero(50220));
+        await insumos.actualizar(
+          id,
+          InsumoDatos(
+            nombre: 'Azúcar de referencia',
+            unidad: Unidad.gramos,
+            precioReferencia: Dinero.pesos(930),
+            cantidadReferencia: 1000,
+            fuenteCosto: FuenteCostoInsumo.ultimaCompra,
+          ),
+        );
+        final seleccionado = await recetas.observarDetalle(recetaId).first;
+        expect(seleccionado!.items.single.costoEstimado, Dinero.pesos(1080));
+      },
+    );
+
     test('Recetas calculan costo del producto y compras sugeridas según pedidos activos', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);

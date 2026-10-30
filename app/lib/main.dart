@@ -33,6 +33,7 @@ Future<void> main() async {
   }
 
   final almacen = AlmacenLocal(
+    inicializarDatosBase: false,
     db: powerSyncDb,
     onSincronizarDirecto: powerSyncDb != null
         ? null

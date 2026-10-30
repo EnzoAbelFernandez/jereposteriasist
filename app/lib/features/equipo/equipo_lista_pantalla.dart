@@ -85,7 +85,7 @@ class _EquipoListaPantallaState extends ConsumerState<EquipoListaPantalla> {
         child: FloatingActionButton.extended(
           onPressed: () => _mostrarDialogoInvitar(context),
           icon: const Icon(Icons.person_add_alt_1_outlined),
-          label: const Text('Invitar empleado'),
+          label: const Text('Crear cuenta'),
         ),
       ),
       cuerpo: Column(
@@ -303,6 +303,7 @@ class _DialogoInvitarEmpleadoState
   String _nombre = '';
   String _email = '';
   String _telefono = '';
+  String _password = '';
 
   Future<void> _enviarInvitacion() async {
     if (!_formKey.currentState!.validate()) return;
@@ -312,6 +313,7 @@ class _DialogoInvitarEmpleadoState
           .invitarEmpleado(
             nombre: _nombre.trim(),
             email: _email.trim(),
+            password: _password,
             telefono: _telefono.trim().isEmpty ? null : _telefono.trim(),
           );
     } on SinConexion catch (e) {
@@ -319,14 +321,14 @@ class _DialogoInvitarEmpleadoState
     }
     if (mounted) {
       Navigator.of(context).pop();
-      mostrarExito(context, 'Invitación enviada');
+      mostrarExito(context, 'Cuenta creada. Asignale permisos desde Equipo.');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Invitar empleado'),
+      title: const Text('Crear cuenta de empleado'),
       content: SizedBox(
         width: 400,
         child: Form(
@@ -349,6 +351,16 @@ class _DialogoInvitarEmpleadoState
                 onChanged: (v) => _email = v,
               ),
               Separacion.media,
+              TextFormField(
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Contraseña inicial *',
+                ),
+                onChanged: (v) => _password = v,
+                validator: (v) =>
+                    (v?.length ?? 0) < 8 ? 'Usá al menos 8 caracteres.' : null,
+              ),
+              Separacion.media,
               CampoTexto(
                 etiqueta: 'Teléfono (opcional)',
                 teclado: TextInputType.phone,
@@ -364,7 +376,7 @@ class _DialogoInvitarEmpleadoState
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
         ),
-        BotonGuardar(texto: 'Enviar invitación', onGuardar: _enviarInvitacion),
+        BotonGuardar(texto: 'Crear cuenta', onGuardar: _enviarInvitacion),
       ],
     );
   }

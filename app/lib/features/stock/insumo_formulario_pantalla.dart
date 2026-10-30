@@ -24,6 +24,9 @@ class _InsumoFormularioPantallaState
   Unidad _unidad = Unidad.gramos;
   int _stockMinimo = 0;
   int _stockInicial = 0;
+  Dinero? _precioReferencia;
+  int? _cantidadReferencia;
+  FuenteCostoInsumo _fuenteCosto = FuenteCostoInsumo.ultimaCompra;
   String _categoria = '';
   String _notas = '';
 
@@ -33,6 +36,9 @@ class _InsumoFormularioPantallaState
     _nombre = i.nombre;
     _unidad = i.unidad;
     _stockMinimo = i.stockMinimo;
+    _precioReferencia = i.precioReferencia;
+    _cantidadReferencia = i.cantidadReferencia;
+    _fuenteCosto = i.fuenteCosto;
     _categoria = i.categoria ?? '';
     _notas = i.notas ?? '';
   }
@@ -43,6 +49,9 @@ class _InsumoFormularioPantallaState
       nombre: _nombre.trim(),
       unidad: _unidad,
       stockMinimo: _stockMinimo,
+      precioReferencia: _precioReferencia,
+      cantidadReferencia: _cantidadReferencia,
+      fuenteCosto: _fuenteCosto,
       categoria: _categoria.trim().isEmpty ? null : _categoria.trim(),
       notas: _notas.trim().isEmpty ? null : _notas.trim(),
     );
@@ -154,6 +163,32 @@ class _InsumoFormularioPantallaState
             permitirCero: true,
             onChanged: (v) => _stockInicial = v ?? 0,
           ),
+        SelectorOpcion<FuenteCostoInsumo>(
+          etiqueta: 'Precio usado para calcular costos',
+          opciones: FuenteCostoInsumo.values,
+          valor: _fuenteCosto,
+          etiquetaDe: (fuente) => fuente.etiqueta,
+          obligatorio: true,
+          onChanged: (v) {
+            if (v != null) setState(() => _fuenteCosto = v);
+          },
+        ),
+        Text(
+          _fuenteCosto == FuenteCostoInsumo.referencia
+              ? 'Se usa el precio de referencia. Si falta, el costo queda pendiente.'
+              : 'Se usa la última compra. Si no hay compras, el costo queda pendiente.',
+        ),
+        CampoDinero(
+          etiqueta: 'Precio de referencia por presentación (opcional)',
+          valorInicial: _precioReferencia,
+          onChanged: (v) => _precioReferencia = v,
+        ),
+        CampoCantidad(
+          etiqueta: 'Cantidad de la presentación',
+          unidad: _unidad,
+          valorInicial: _cantidadReferencia,
+          onChanged: (v) => _cantidadReferencia = v,
+        ),
         CampoTexto(
           etiqueta: 'Categoría (opcional)',
           valorInicial: _categoria,

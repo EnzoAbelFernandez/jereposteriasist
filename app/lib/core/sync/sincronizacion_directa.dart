@@ -169,6 +169,13 @@ class SincronizacionDirectaSupabase {
             nombre: r['nombre'] as String,
             unidad: Unidad.desdeValor(r['unidad'] as String),
             stockMinimo: (r['stock_minimo'] as num?)?.toInt() ?? 0,
+            precioReferencia: r['precio_referencia_centavos'] == null
+                ? null
+                : Dinero((r['precio_referencia_centavos'] as num).toInt()),
+            cantidadReferencia: (r['cantidad_referencia'] as num?)?.toInt(),
+            fuenteCosto: FuenteCostoInsumo.desdeValor(
+              r['fuente_costo'] as String?,
+            ),
             categoria: r['categoria'] as String?,
             notas: r['notas'] as String?,
             archivadoEn: r['archivado_en'] != null

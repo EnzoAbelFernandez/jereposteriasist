@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:jereposteria/compartido/tipos/enums.dart';
 import 'package:jereposteria/compartido/tipos/errores.dart';
 import 'package:jereposteria/data/local/almacen_local.dart';
@@ -26,6 +27,7 @@ abstract class EquipoRepositorio {
   Future<void> invitarEmpleado({
     required String nombre,
     required String email,
+    required String password,
     String? telefono,
   });
   Future<void> desactivar(String perfilId);
@@ -146,11 +148,26 @@ class _EquipoRepositorioLocal implements EquipoRepositorio {
         'El jefe siempre tiene acceso total a todos los módulos.',
       );
     }
-    final mapa = Map<Modulo, NivelPermiso>.of(
-      _almacen.permisos[perfilId] ?? {},
-    );
-    mapa[modulo] = nivel;
-    await _almacen.persistirPermisos(perfilId, mapa);
+    try {
+      final client = Supabase.instance.client;
+      await client
+          .from('permisos')
+          .update({'nivel': nivel.valor})
+          .eq('perfil_id', perfilId)
+          .eq('modulo', modulo.valor)
+          .select('id')
+          .single();
+      final mapa = Map<Modulo, NivelPermiso>.of(
+        _almacen.permisos[perfilId] ?? {},
+      );
+      mapa[modulo] = nivel;
+      _almacen.permisos[perfilId] = mapa;
+      _almacen.notificar();
+    } catch (_) {
+      throw const ErrorDeNegocio(
+        'No pudimos guardar el permiso. Revisá la conexión y volvé a intentar.',
+      );
+    }
   }
 
   @override
@@ -178,6 +195,7 @@ class _EquipoRepositorioLocal implements EquipoRepositorio {
   Future<void> invitarEmpleado({
     required String nombre,
     required String email,
+    required String password,
     String? telefono,
   }) async {
     if (!_almacen.conectadoAInternet) {
@@ -186,18 +204,58 @@ class _EquipoRepositorioLocal implements EquipoRepositorio {
     if (nombre.trim().isEmpty || email.trim().isEmpty) {
       throw const ErrorDeNegocio('Completá el nombre y el email.');
     }
-    final id = _almacen.generarId();
-    _almacen.perfiles[id] = Perfil(
-      id: id,
-      nombre: nombre.trim(),
-      rol: Rol.empleado,
-      telefono: telefono?.trim().isEmpty == true ? null : telefono?.trim(),
-      activo: true,
-    );
-    _almacen.permisos[id] = {
-      for (final m in Modulo.values) m: NivelPermiso.ninguno,
-    };
-    _almacen.notificar();
+    if (password.length < 8) {
+      throw const ErrorDeNegocio(
+        'La contraseña debe tener al menos 8 caracteres.',
+      );
+    }
+    try {
+      final client = Supabase.instance.client;
+      final respuesta = await client.functions.invoke(
+        'crear-empleado',
+        body: {
+          'nombre': nombre.trim(),
+          'email': email.trim(),
+          'password': password,
+          'telefono': telefono,
+        },
+      );
+      final resultado = respuesta.data;
+      if (resultado is! Map || resultado['id'] is! String) {
+        throw const ErrorDeNegocio(
+          'No pudimos confirmar la creación de la cuenta.',
+        );
+      }
+      final id = resultado['id'] as String;
+      _almacen.perfiles[id] = Perfil(
+        id: id,
+        nombre: nombre.trim(),
+        rol: Rol.empleado,
+        telefono: resultado['telefono_guardado'] == true ? telefono : null,
+      );
+      _almacen.permisos[id] = {
+        for (final m in Modulo.values) m: NivelPermiso.ninguno,
+      };
+      _almacen.notificar();
+      if (resultado['telefono_guardado'] == false) {
+        throw const ErrorDeNegocio(
+          'La cuenta se creó, pero no se pudo guardar el teléfono.',
+        );
+      }
+    } on ErrorDeNegocio {
+      rethrow;
+    } on FunctionException catch (e) {
+      final detalle = e.details;
+      throw ErrorDeNegocio(
+        detalle is Map && detalle['error'] is String
+            ? detalle['error'] as String
+            : 'No pudimos crear la cuenta. Revisá la conexión y volvé a intentar.',
+      );
+    } catch (_) {
+      throw const ErrorDeNegocio(
+        'No pudimos confirmar la creación. Revisá el equipo antes de reintentar.',
+      );
+    }
   }
 
   @override
@@ -248,6 +306,19 @@ class _EquipoRepositorioLocal implements EquipoRepositorio {
     }
     if (perfilId == _almacen.usuarioActualId) {
       throw const ErrorDeNegocio('No podés cambiar tu propio rol.');
+    }
+    try {
+      final client = Supabase.instance.client;
+      await client
+          .from('perfiles')
+          .update({'rol': rol.valor})
+          .eq('id', perfilId)
+          .select('id')
+          .single();
+    } catch (_) {
+      throw const ErrorDeNegocio(
+        'No pudimos guardar el rol. Revisá la conexión y volvé a intentar.',
+      );
     }
     _almacen.perfiles[perfilId] = Perfil(
       id: p.id,
